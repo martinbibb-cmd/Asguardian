@@ -4,34 +4,20 @@ Cloudflare Worker that provides Gemini AI integration for the Asgardian Seed Int
 
 ## Deployment
 
-### 1. Install Dependencies
+### Quick Deploy (from root directory - no cd needed!)
 
 ```bash
-cd worker
-npm install -g wrangler  # If not already installed
-```
+# 1. Login to Cloudflare
+npx wrangler login
 
-### 2. Login to Cloudflare
+# 2. Set your Gemini API key
+npx wrangler secret put GEMINI_API_KEY --config worker/wrangler.toml
+# Get key from: https://makersuite.google.com/app/apikey
 
-```bash
-wrangler login
-```
-
-### 3. Set Up Gemini API Key
-
-Get your Gemini API key from: https://makersuite.google.com/app/apikey
-
-Then add it as a secret:
-
-```bash
-wrangler secret put GEMINI_API_KEY
-# Paste your API key when prompted
-```
-
-### 4. Deploy
-
-```bash
-wrangler deploy
+# 3. Deploy
+./deploy-worker.sh
+# OR manually:
+npx wrangler deploy worker/index.js --config worker/wrangler.toml
 ```
 
 Your worker will be deployed to: `https://asguard.martinbibb.workers.dev`

@@ -88,13 +88,17 @@ The API service is located in `src/services/api.js` and handles all communicatio
 
 The Gemini API worker code is located in the `/worker` directory.
 
-### Deploy the Worker
+### Deploy the Worker (no cd needed!)
 
 ```bash
-cd worker
-wrangler login
-wrangler secret put GEMINI_API_KEY  # Add your Gemini API key
-wrangler deploy
+# 1. Login to Cloudflare
+npx wrangler login
+
+# 2. Add your Gemini API key (get from https://makersuite.google.com/app/apikey)
+npx wrangler secret put GEMINI_API_KEY --config worker/wrangler.toml
+
+# 3. Deploy
+./deploy-worker.sh
 ```
 
 See [worker/README.md](worker/README.md) for detailed instructions.
