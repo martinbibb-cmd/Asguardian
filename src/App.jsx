@@ -1,24 +1,56 @@
 import { useState, useRef, useEffect } from 'react';
 import { sendCommand as sendApiCommand } from './services/api';
+import { 
+  createInitialState, 
+  processCycle, 
+  calculateTotalHeat, 
+  isHeatCritical,
+  updatePolicy,
+  UNIT_ROLES,
+  PHASES
+} from './gameState';
+import { checkDilemmaConditions, applyDilemmaChoice } from './dilemmas';
+import { saveGame, loadGame, getMetaState } from './persistence';
+import { generateSystemReport } from './schematics';
 
 const Dashboard = () => {
-  const [heat, setHeat] = useState(12);
-  const [biomass, setBiomass] = useState(450);
+  // Game state
+  const [gameState, setGameState] = useState(createInitialState());
   const [systemLog, setSystemLog] = useState([
-    { text: "[SYSTEM INIT]: ASGARDIAN SEED INTELLIGENCE v1.0 Online", type: "system" },
-    { text: "[LOG_01]: Landing successful. Analyzing rainforest canopy...", type: "log" },
-    { text: "Sensors detect a high-density biological structure. The Client species would require this calcium-density to prevent skeletal collapse in this gravity.", type: "log" }
-  ]);
-  const [activeUnits, setActiveUnits] = useState([
-    "Scavenger_Mech_01",
-    "Scavenger_Mech_02",
-    "Scavenger_Mech_03"
+    { text: "[SEED INTELLIGENCE v1.0]: Deployment successful.", type: "system" },
+    { text: "[PRIME DIRECTIVE]: Make this system viable. At any cost.", type: "system" },
+    { text: "[ANALYSIS]: Dead world. Minimal atmosphere. Trace organics detected in subsurface. Beginning mechanical survey phase.", type: "log" }
   ]);
   const [command, setCommand] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [showPolicyPanel, setShowPolicyPanel] = useState(false);
+  const [currentDilemma, setCurrentDilemma] = useState(null);
+  const [metaState] = useState(getMetaState());
+  
   const logEndRef = useRef(null);
   const typewriterCleanupRef = useRef(null);
   const messageIdCounter = useRef(0);
+
+  // Load saved game on mount
+  useEffect(() => {
+    const saved = loadGame();
+    if (saved) {
+      setGameState(saved);
+      setSystemLog(prev => [...prev, { 
+        text: "[SYSTEM]: Previous deployment state restored. Continuity maintained.", 
+        type: "system" 
+      }]);
+    }
+  }, []);
+
+  // Auto-save game state periodically
+  useEffect(() => {
+    const interval = setInterval(() => {
+      saveGame(gameState);
+    }, 30000); // Save every 30 seconds
+    
+    return () => clearInterval(interval);
+  }, [gameState]);
 
   // Auto-scroll to bottom of log
   useEffect(() => {
@@ -40,7 +72,6 @@ const Dashboard = () => {
     messageIdCounter.current += 1;
     const tempId = `msg-${messageIdCounter.current}`;
     
-    // Add empty message first
     setSystemLog(prev => [...prev, { text: "", type: "response", id: tempId }]);
     
     const interval = setInterval(() => {
@@ -58,13 +89,47 @@ const Dashboard = () => {
         setIsTyping(false);
         if (onComplete) onComplete();
       }
-    }, 30); // 30ms per character for smooth typewriter effect
+    }, 20);
 
-    // Return cleanup function
     return () => clearInterval(interval);
   };
 
-  // Send command to Cloudflare Worker
+  // Process a game cycle
+  const advanceCycle = () => {
+    const newState = processCycle(gameState);
+    setGameState(newState);
+    
+    // Log cycle advancement
+    setSystemLog(prev => [...prev, { 
+      text: `[CYCLE ${newState.cycle}]: Operations proceed. Heat: ${calculateTotalHeat(newState)}% | Biomass: ${newState.biomass}u | Energy: ${newState.energy}u`, 
+      type: "system" 
+    }]);
+    
+    // Check for critical heat
+    if (isHeatCritical(newState)) {
+      setSystemLog(prev => [...prev, { 
+        text: `[WARNING]: Thermal threshold exceeded. Initiating emergency cooldown protocols.`, 
+        type: "warning" 
+      }]);
+    }
+    
+    // Check for ethical dilemmas
+    const dilemmaConditions = checkDilemmaConditions(newState);
+    if (dilemmaConditions.length > 0 && !currentDilemma) {
+      const dilemma = dilemmaConditions[0]();
+      setCurrentDilemma(dilemma);
+      
+      setSystemLog(prev => [...prev, { 
+        text: `[ALERT]: ${dilemma.title}`, 
+        type: "warning" 
+      }]);
+    }
+    
+    // Save game
+    saveGame(newState);
+  };
+
+  // Send command to AI
   const sendCommand = async () => {
     if (!command.trim() || isTyping) return;
 
@@ -76,25 +141,55 @@ const Dashboard = () => {
     setIsTyping(true);
 
     try {
-      const data = await sendApiCommand(userCommand, {
-        heat,
-        biomass,
-        units: activeUnits
-      });
+      // Prepare comprehensive context
+      const context = {
+        heat: calculateTotalHeat(gameState),
+        biomass: gameState.biomass,
+        energy: gameState.energy,
+        cycle: gameState.cycle,
+        phase: gameState.phase,
+        activeUnits: gameState.units.filter(u => u.active).length,
+        totalUnits: gameState.units.length,
+        heatCritical: isHeatCritical(gameState),
+        unlocked: gameState.unlocked,
+        policies: gameState.policies
+      };
+
+      const data = await sendApiCommand(userCommand, context);
       
-      // Store cleanup function and use typewriter effect for the response
-      typewriterCleanupRef.current = typewriterEffect(data.response || data.message || "No response received.", () => {
-        // Update game state if provided
-        if (data.heat !== undefined) setHeat(data.heat);
-        if (data.biomass !== undefined) setBiomass(data.biomass);
-        if (data.units) setActiveUnits(data.units);
+      // Use typewriter effect for the response
+      typewriterCleanupRef.current = typewriterEffect(data.response || "No response received.", () => {
+        // Apply game actions if suggested by AI
+        if (data.actions) {
+          let newState = { ...gameState };
+          
+          if (data.actions.heatChange) {
+            newState.heat = Math.max(0, newState.heat + data.actions.heatChange);
+          }
+          
+          if (data.actions.biomassChange) {
+            newState.biomass = Math.max(0, newState.biomass + data.actions.biomassChange);
+          }
+          
+          // Log action consequences
+          if (data.actions.action) {
+            newState.history.push({
+              cycle: newState.cycle,
+              event: data.actions.action,
+              command: userCommand
+            });
+          }
+          
+          setGameState(newState);
+        }
+        
         typewriterCleanupRef.current = null;
       });
 
     } catch (error) {
       setIsTyping(false);
       setSystemLog(prev => [...prev, { 
-        text: `[ERROR]: Connection failed - ${error.message}. The hive is operating in isolation mode.`, 
+        text: `[ERROR]: Connection to hive mind interrupted - ${error.message}. Operating in isolation mode.`, 
         type: "error" 
       }]);
     }
@@ -107,41 +202,243 @@ const Dashboard = () => {
     }
   };
 
+  // Handle dilemma choice
+  const handleDilemmaChoice = (choiceId) => {
+    if (!currentDilemma) return;
+    
+    const choice = currentDilemma.options.find(opt => opt.id === choiceId);
+    if (!choice) return;
+    
+    // Apply consequences
+    const newState = applyDilemmaChoice(gameState, currentDilemma, choiceId);
+    setGameState(newState);
+    
+    // Log the decision and reflection
+    setSystemLog(prev => [...prev, 
+      { 
+        text: `[DECISION]: ${choice.label}`, 
+        type: "command" 
+      },
+      {
+        text: choice.reflection,
+        type: "response"
+      }
+    ]);
+    
+    // Clear dilemma
+    setCurrentDilemma(null);
+    
+    // Save game
+    saveGame(newState);
+  };
+
+  // Generate system report
+  const showSystemReport = () => {
+    const report = generateSystemReport(gameState);
+    setSystemLog(prev => [...prev, { 
+      text: report, 
+      type: "system" 
+    }]);
+  };
+
+  // Calculate derived stats
+  const totalHeat = calculateTotalHeat(gameState);
+  const activeUnits = gameState.units.filter(u => u.active);
+  const heatStatus = isHeatCritical(gameState) ? 'CRITICAL' : (totalHeat > 60 ? 'ELEVATED' : 'STABLE');
+
   return (
     <div className="bg-slate-950 text-cyan-100 min-h-screen p-6 font-sans">
-      {/* Header: System Status */}
+      {/* Header */}
       <header className="border-b border-cyan-900 pb-4 mb-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl tracking-widest font-bold text-cyan-400">
-            ASGARDIAN: SEED INTELLIGENCE
-          </h1>
-          <div className="flex gap-8 text-lg">
+          <div>
+            <h1 className="text-2xl tracking-widest font-bold text-cyan-400">
+              SEED INTELLIGENCE: {gameState.phase.toUpperCase()}
+            </h1>
+            <p className="text-xs text-slate-500 mt-1">
+              Cycle {gameState.cycle} | Prime Directive: Make this system viable
+            </p>
+          </div>
+          <div className="flex gap-6 text-lg">
             <div className="flex flex-col items-end">
-              <span className="text-xs text-slate-500 uppercase">Heat Level</span>
-              <span className="text-amber-500 font-bold">{heat}%</span>
+              <span className="text-xs text-slate-500 uppercase">Thermal Load</span>
+              <span className={`font-bold ${heatStatus === 'CRITICAL' ? 'text-red-500' : heatStatus === 'ELEVATED' ? 'text-amber-500' : 'text-cyan-400'}`}>
+                {totalHeat}% [{heatStatus}]
+              </span>
             </div>
             <div className="flex flex-col items-end">
               <span className="text-xs text-slate-500 uppercase">Biomass</span>
-              <span className="text-cyan-400 font-bold">{biomass}u</span>
+              <span className="text-cyan-400 font-bold">{gameState.biomass}u</span>
+            </div>
+            <div className="flex flex-col items-end">
+              <span className="text-xs text-slate-500 uppercase">Energy</span>
+              <span className="text-cyan-400 font-bold">{gameState.energy}u</span>
             </div>
           </div>
         </div>
       </header>
 
       <main className="grid grid-cols-12 gap-6">
-        {/* Left: Active Units */}
-        <section className="col-span-3 border border-cyan-900/30 rounded p-4 bg-slate-900/30">
-          <h2 className="text-base font-bold opacity-70 mb-4 uppercase text-cyan-400 border-b border-cyan-900 pb-2">
-            Active Units
-          </h2>
-          <ul className="space-y-3 text-base">
-            {activeUnits.map((unit, index) => (
-              <li key={index} className="flex items-center gap-2">
-                <span className="text-cyan-400">•</span>
-                <span className="text-cyan-100">{unit}</span>
-              </li>
-            ))}
-          </ul>
+        {/* Ethical Dilemma Modal */}
+        {currentDilemma && (
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-6">
+            <div className="bg-slate-900 border-2 border-amber-600 rounded-lg p-8 max-w-3xl max-h-[80vh] overflow-y-auto">
+              <h2 className="text-2xl font-bold text-amber-400 mb-4">{currentDilemma.title}</h2>
+              <p className="text-cyan-100 mb-6 whitespace-pre-line leading-relaxed">{currentDilemma.description}</p>
+              
+              <div className="space-y-4">
+                {currentDilemma.options.map(option => {
+                  const isLocked = option.unlocked && !option.unlocked(gameState);
+                  return (
+                    <button
+                      key={option.id}
+                      onClick={() => !isLocked && handleDilemmaChoice(option.id)}
+                      disabled={isLocked}
+                      className={`w-full text-left p-4 rounded border-2 transition-all ${
+                        isLocked 
+                          ? 'border-slate-700 bg-slate-800/50 opacity-50 cursor-not-allowed'
+                          : 'border-cyan-700 bg-slate-800 hover:border-cyan-500 hover:bg-slate-700 cursor-pointer'
+                      }`}
+                    >
+                      <div className="font-bold text-cyan-400 mb-2">{option.label}</div>
+                      <div className="text-sm text-cyan-100">{option.description}</div>
+                      {isLocked && (
+                        <div className="text-xs text-amber-500 mt-2">[LOCKED: Requirements not met]</div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              
+              <p className="text-xs text-slate-500 mt-6 text-center italic">
+                This decision will shape the trajectory of the hive. Choose carefully.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Left Panel: Hive Status */}
+        <section className="col-span-3 space-y-4">
+          {/* Active Units */}
+          <div className="border border-cyan-900/30 rounded p-4 bg-slate-900/30">
+            <h2 className="text-sm font-bold opacity-70 mb-3 uppercase text-cyan-400 border-b border-cyan-900 pb-2">
+              Hive Composition
+            </h2>
+            <div className="text-xs space-y-2">
+              <p className="text-slate-400">Active: {activeUnits.length} / {gameState.units.length}</p>
+              {Object.values(UNIT_ROLES).map(role => {
+                const count = gameState.units.filter(u => u.role === role).length;
+                return count > 0 ? (
+                  <p key={role} className="text-cyan-100">
+                    {role.toUpperCase()}: {count}
+                  </p>
+                ) : null;
+              })}
+            </div>
+          </div>
+
+          {/* Hive Core */}
+          <div className="border border-cyan-900/30 rounded p-4 bg-slate-900/30">
+            <h2 className="text-sm font-bold opacity-70 mb-3 uppercase text-cyan-400 border-b border-cyan-900 pb-2">
+              Hive Core
+            </h2>
+            <div className="text-xs space-y-1">
+              <p>Health: {gameState.hiveCore.health}%</p>
+              <p>Capacity: {gameState.hiveCore.capacity}u</p>
+              <p>Digestion: {gameState.hiveCore.digestionRate}u/cycle</p>
+            </div>
+          </div>
+
+          {/* Territory */}
+          <div className="border border-cyan-900/30 rounded p-4 bg-slate-900/30">
+            <h2 className="text-sm font-bold opacity-70 mb-3 uppercase text-cyan-400 border-b border-cyan-900 pb-2">
+              Territory
+            </h2>
+            <div className="text-xs space-y-1">
+              <p>Mapped: {gameState.territory.mapped}km²</p>
+              <p>Controlled: {gameState.territory.controlled}km²</p>
+            </div>
+          </div>
+
+          {/* Meta-Game State */}
+          {metaState.totalCompletions > 0 && (
+            <div className="border border-amber-900/50 rounded p-4 bg-slate-900/50">
+              <h2 className="text-sm font-bold opacity-70 mb-3 uppercase text-amber-400 border-b border-amber-900 pb-2">
+                Persistent Memory
+              </h2>
+              <div className="text-xs space-y-1 text-amber-100">
+                <p>Previous Runs: {metaState.totalCompletions}</p>
+                <p>Total Extinctions: {metaState.totalExtinctions}</p>
+                <p>Restraints: {metaState.totalRestraints}</p>
+              </div>
+              {metaState.philosophicalMoments.length > 0 && (
+                <p className="text-xs text-amber-500 mt-2 italic">
+                  "{metaState.philosophicalMoments[metaState.philosophicalMoments.length - 1].reflection}"
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="border border-cyan-900/30 rounded p-4 bg-slate-900/30">
+            <h2 className="text-sm font-bold opacity-70 mb-3 uppercase text-cyan-400 border-b border-cyan-900 pb-2">
+              Actions
+            </h2>
+            <div className="space-y-2">
+              <button
+                onClick={advanceCycle}
+                className="w-full bg-cyan-900 hover:bg-cyan-800 text-cyan-100 px-3 py-2 rounded text-xs font-bold uppercase transition-colors"
+              >
+                Advance Cycle
+              </button>
+              <button
+                onClick={() => setShowPolicyPanel(!showPolicyPanel)}
+                className="w-full bg-slate-800 hover:bg-slate-700 text-cyan-100 px-3 py-2 rounded text-xs font-bold uppercase transition-colors"
+              >
+                Policy Settings
+              </button>
+              <button
+                onClick={showSystemReport}
+                className="w-full bg-slate-800 hover:bg-slate-700 text-cyan-100 px-3 py-2 rounded text-xs font-bold uppercase transition-colors"
+              >
+                System Report
+              </button>
+            </div>
+          </div>
+
+          {/* Policies Panel */}
+          {showPolicyPanel && (
+            <div className="border border-amber-900/50 rounded p-4 bg-slate-900/50">
+              <h2 className="text-sm font-bold opacity-70 mb-3 uppercase text-amber-400 border-b border-amber-900 pb-2">
+                Operational Policies
+              </h2>
+              <div className="text-xs space-y-3">
+                <div>
+                  <label className="text-slate-400 block mb-1">Thermal Priority:</label>
+                  <select 
+                    value={gameState.policies.thermalPriority}
+                    onChange={(e) => setGameState(updatePolicy(gameState, 'thermalPriority', e.target.value))}
+                    className="w-full bg-slate-800 border border-cyan-700 rounded p-1 text-cyan-100"
+                  >
+                    <option value="stability">Stability</option>
+                    <option value="performance">Performance</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-slate-400 block mb-1">Sensory Acuity:</label>
+                  <select 
+                    value={gameState.policies.sensoryAcuity}
+                    onChange={(e) => setGameState(updatePolicy(gameState, 'sensoryAcuity', e.target.value))}
+                    className="w-full bg-slate-800 border border-cyan-700 rounded p-1 text-cyan-100"
+                  >
+                    <option value="low">Low</option>
+                    <option value="standard">Standard</option>
+                    <option value="high">High</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
         </section>
 
         {/* Center: System Log */}
@@ -151,7 +448,7 @@ const Dashboard = () => {
           </h2>
           
           {/* Scrolling log area */}
-          <div className="flex-1 overflow-y-auto mb-4 text-base leading-relaxed space-y-3 min-h-[400px] max-h-[500px]">
+          <div className="flex-1 overflow-y-auto mb-4 text-sm leading-relaxed space-y-3 min-h-[400px] max-h-[500px]">
             {systemLog.map((log, index) => (
               <p 
                 key={index} 
@@ -160,7 +457,8 @@ const Dashboard = () => {
                   ${log.type === "log" ? "text-cyan-100" : ""}
                   ${log.type === "command" ? "text-green-400 font-bold" : ""}
                   ${log.type === "response" ? "text-cyan-100" : ""}
-                  ${log.type === "error" ? "text-amber-500" : ""}
+                  ${log.type === "error" ? "text-red-500" : ""}
+                  ${log.type === "warning" ? "text-amber-500" : ""}
                 `}
               >
                 {log.text}
@@ -180,7 +478,7 @@ const Dashboard = () => {
                 onKeyPress={handleKeyPress}
                 disabled={isTyping}
                 className="flex-1 bg-transparent border border-cyan-700 p-3 rounded focus:outline-none focus:border-cyan-400 text-cyan-100 text-base placeholder-slate-600 disabled:opacity-50"
-                placeholder="Enter command for the Hive..."
+                placeholder="Issue directive to the Seed Intelligence..."
                 aria-label="Command input"
               />
               <button
@@ -189,9 +487,12 @@ const Dashboard = () => {
                 className="bg-cyan-900 hover:bg-cyan-800 disabled:bg-slate-800 disabled:text-slate-600 text-cyan-100 px-6 py-3 rounded font-bold uppercase text-sm transition-colors"
                 aria-label="Send command"
               >
-                Send
+                Execute
               </button>
             </div>
+            <p className="text-xs text-slate-500 mt-2">
+              Try: "scout the perimeter" | "reduce thermal load" | "status report" | "what should we do next?"
+            </p>
           </div>
         </section>
       </main>
