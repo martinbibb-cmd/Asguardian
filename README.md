@@ -4,11 +4,18 @@ This template provides a minimal setup to get React working in Vite with HMR and
 
 ## Cloudflare Pages Deployment
 
-This application is configured to deploy to Cloudflare Pages. To deploy successfully, configure your Cloudflare Pages project with the following settings:
+This application is configured to deploy to Cloudflare Pages. To deploy successfully, configure your Cloudflare Pages project with **one of the following options**:
 
+### Option 1: Separate Build and Deploy (Recommended)
 - **Build command**: `npm run build`
 - **Build output directory**: `dist`
-- **Deploy command**: Leave empty (or use `npx wrangler versions upload` if using versioned deployments)
+- **Deploy command**: Leave empty
+
+### Option 2: Combined Build and Deploy
+- **Build command**: Leave empty
+- **Deploy command**: `npm run pages:deploy`
+
+**Important**: The `dist` directory must be created by running `npm run build` before deployment. If you use a custom deploy command like `npx wrangler versions upload`, make sure to build first.
 
 The build process will:
 1. Install dependencies via `npm clean-install`
