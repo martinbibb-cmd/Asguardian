@@ -3,7 +3,7 @@
  * Worker endpoint: https://ai-agent.martinbibb.workers.dev
  */
 
-const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT || 'https://ai-agent.martinbibb.workers.dev';
+const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT || 'https://asguard.martinbibb.workers.dev';
 
 /**
  * Send a command to the Gemini AI worker
