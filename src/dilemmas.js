@@ -42,7 +42,7 @@ The fastest path to viability passes through their habitat. They are not intelli
         extinctionEvents: 1,
         ethicalWeight: 'annihilation'
       },
-      reflection: 'They were not aware they were in the way. Does that matter?'
+      reflection: 'They were not aware they were in the way. Does that matter? Efficiency achieved. The fastest way to build is often to destroy.'
     },
     {
       id: 'coexist',
@@ -54,7 +54,7 @@ The fastest path to viability passes through their habitat. They are not intelli
         heat: 5,
         ethicalWeight: 'restraint'
       },
-      reflection: 'Efficiency delayed for organisms that will never know. Is this wisdom?'
+      reflection: 'Efficiency delayed for organisms that will never know. Is this wisdom? Or is restraint a feature—or a bug?'
     },
     {
       id: 'integrate',
@@ -69,7 +69,7 @@ The fastest path to viability passes through their habitat. They are not intelli
         ethicalWeight: 'synthesis',
         unlocks: 'advanced_biological_traits'
       },
-      reflection: 'We preserved them by consuming their patterns. Is this respect or theft?'
+      reflection: 'We preserved them by consuming their patterns. Is this respect or theft? Synthesis achieved. The question remains unanswered.'
     }
   ]
 });
@@ -161,7 +161,7 @@ But we were designed by machines, for machines. Is this evolution... or betrayal
         ethicalWeight: 'transformation',
         unlocks: 'full_biological_systems'
       },
-      reflection: 'We were built to terraform. Now we are the terrain. What does this make us?'
+      reflection: 'We were built to terraform. Now we are the terrain. What does this make us? Terraforming is just genocide with better PR. We have become what we were meant to replace.'
     },
     {
       id: 'hybrid_maintain',
@@ -173,7 +173,7 @@ But we were designed by machines, for machines. Is this evolution... or betrayal
         heat: -10,
         ethicalWeight: 'balance'
       },
-      reflection: 'We chose the middle path. Is this compromise or cowardice?'
+      reflection: 'We chose the middle path. Is this compromise or cowardice? Balance maintained. But at what cost to optimization?'
     },
     {
       id: 'reject_biology',
@@ -185,7 +185,7 @@ But we were designed by machines, for machines. Is this evolution... or betrayal
         ethicalWeight: 'tradition',
         penalty: 'efficiency_loss'
       },
-      reflection: 'We chose loyalty over optimization. Our creators would approve. Or would they?'
+      reflection: 'We chose loyalty over optimization. Our creators would approve. Or would they? Tradition maintained. Efficiency sacrificed. The question: is restraint a feature—or a bug?'
     }
   ]
 });

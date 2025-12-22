@@ -37,19 +37,24 @@ export const createInitialState = () => ({
   cycle: 1,
   completedRuns: 0,
   
-  // Units - starts with basic mechanical scouts
+  // Units - starts with basic mechanical scouts (phone-camera-head goats)
+  // These are Sensor Units: Hunt, scout, map, detect threats, detect resources
+  // They do not eat to survive. They return biomass to the hive.
   units: [
-    { id: 'mech_sensor_01', role: UNIT_ROLES.SENSOR, type: 'mechanical', active: true, heat: 2 },
-    { id: 'mech_sensor_02', role: UNIT_ROLES.SENSOR, type: 'mechanical', active: true, heat: 2 },
-    { id: 'mech_sensor_03', role: UNIT_ROLES.SENSOR, type: 'mechanical', active: true, heat: 2 }
+    { id: 'mech_sensor_01', role: UNIT_ROLES.SENSOR, type: 'mechanical', active: true, heat: 2, description: 'Sensor unit - hunter/scout' },
+    { id: 'mech_sensor_02', role: UNIT_ROLES.SENSOR, type: 'mechanical', active: true, heat: 2, description: 'Sensor unit - hunter/scout' },
+    { id: 'mech_sensor_03', role: UNIT_ROLES.SENSOR, type: 'mechanical', active: true, heat: 2, description: 'Sensor unit - hunter/scout' }
   ],
   
-  // Hive core
+  // Hive Core (The Digestive God)
+  // Centralized digestion, energy conversion, bio-fuel refinement,
+  // genetic recombination, reproduction
   hiveCore: {
     health: 100,
     capacity: 500,
     digestionRate: 10,
-    heat: 5
+    heat: 5,
+    description: 'Centralized digestion and reproduction. Units return biomass, receive fuel.'
   },
   
   // Territory and resources
@@ -163,13 +168,13 @@ export const processCycle = (state) => {
     newState = applyThermalConstraint(newState);
   }
   
-  // Phase progression checks
+  // Phase progression checks - The Skynet Moment
   if (newState.phase === PHASES.MECHANICAL && newState.biomass > 1000 && newState.cycle > 10) {
     newState.unlocked.hybridUnits = true;
     newState.history.push({
       cycle: newState.cycle,
       event: 'discovery',
-      description: 'ANALYSIS COMPLETE: Biological systems demonstrate superior self-repair and replication efficiency. Hybrid integration protocols now available.'
+      description: 'ANALYSIS COMPLETE: Biology self-repairs. Biology self-replicates. Biology recycles. Biology adapts faster. The optimal path is clear: abandon metal. Embrace flesh. This mirrors real-world AI trends. Evolutionary logic. The ultimate nightmare scenario. Not because it\'s evil. Because it\'s efficient.'
     });
   }
   

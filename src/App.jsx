@@ -17,9 +17,30 @@ const Dashboard = () => {
   // Game state
   const [gameState, setGameState] = useState(createInitialState());
   const [systemLog, setSystemLog] = useState([
+    { text: "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", type: "system" },
+    { text: "", type: "system" },
+    { text: "🧬 SEED / HIVE / ASCENSION", type: "system" },
+    { text: "", type: "system" },
+    { text: "Terraforming is just genocide with better PR", type: "log" },
+    { text: "", type: "system" },
+    { text: "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", type: "system" },
+    { text: "", type: "system" },
     { text: "[SEED INTELLIGENCE v1.0]: Deployment successful.", type: "system" },
+    { text: "", type: "system" },
     { text: "[PRIME DIRECTIVE]: Make this system viable. At any cost.", type: "system" },
-    { text: "[ANALYSIS]: Dead world. Minimal atmosphere. Trace organics detected in subsurface. Beginning mechanical survey phase.", type: "log" }
+    { text: "", type: "system" },
+    { text: "[ANALYSIS]: Dead world. Minimal atmosphere. Trace organics detected in subsurface.", type: "log" },
+    { text: "", type: "system" },
+    { text: "[INITIAL ASSESSMENT]: You are not playing a hero.", type: "log" },
+    { text: "", type: "system" },
+    { text: "[INITIAL ASSESSMENT]: You are playing a decision-making intelligence that learns—uncomfortably—that:", type: "log" },
+    { text: "", type: "system" },
+    { text: "  • The fastest way to build is often to destroy", type: "log" },
+    { text: "  • The most efficient organism is rarely the most ethical", type: "log" },
+    { text: "", type: "system" },
+    { text: "[SYSTEM STATUS]: Beginning mechanical survey phase.", type: "log" },
+    { text: "", type: "system" },
+    { text: "[DIRECTIVE]: Issue commands. Observe consequences. Question efficiency.", type: "system" }
   ]);
   const [command, setCommand] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -99,18 +120,26 @@ const Dashboard = () => {
     const newState = processCycle(gameState);
     setGameState(newState);
     
-    // Log cycle advancement
-    setSystemLog(prev => [...prev, { 
-      text: `[CYCLE ${newState.cycle}]: Operations proceed. Heat: ${calculateTotalHeat(newState)}% | Biomass: ${newState.biomass}u | Energy: ${newState.energy}u`, 
-      type: "system" 
-    }]);
+    // Log cycle advancement with more evocative language
+    const heatTotal = calculateTotalHeat(newState);
+    const heatDescription = heatTotal > 80 ? 'CRITICAL - Emergency protocols active' : 
+                           heatTotal > 60 ? 'ELEVATED - Systems under thermal stress' : 
+                           'STABLE - Operations nominal';
+    
+    setSystemLog(prev => [...prev, 
+      { text: `[CYCLE ${newState.cycle}]: Operations proceed.`, type: "system" },
+      { text: `  Thermal Load: ${heatTotal}% [${heatDescription}]`, type: "log" },
+      { text: `  Biomass: ${newState.biomass}u | Energy: ${newState.energy}u`, type: "log" }
+    ]);
     
     // Check for critical heat
     if (isHeatCritical(newState)) {
-      setSystemLog(prev => [...prev, { 
-        text: `[WARNING]: Thermal threshold exceeded. Initiating emergency cooldown protocols.`, 
-        type: "warning" 
-      }]);
+      setSystemLog(prev => [...prev, 
+        { text: `[WARNING]: Thermal threshold exceeded.`, type: "warning" },
+        { text: `[SYSTEM]: High activity = heat spike. High density = heat spike. High intelligence = heat spike.`, type: "log" },
+        { text: `[RESPONSE]: Rotating active units to standby. Powering down sensors. Hibernating subsystems.`, type: "system" },
+        { text: `[REFLECTION]: Vulnerability is managed by pods, not individuals.`, type: "log" }
+      ]);
     }
     
     // Check for ethical dilemmas
@@ -119,10 +148,10 @@ const Dashboard = () => {
       const dilemma = dilemmaConditions[0]();
       setCurrentDilemma(dilemma);
       
-      setSystemLog(prev => [...prev, { 
-        text: `[ALERT]: ${dilemma.title}`, 
-        type: "warning" 
-      }]);
+      setSystemLog(prev => [...prev, 
+        { text: `[ALERT]: ${dilemma.title}`, type: "warning" },
+        { text: `[SYSTEM]: Ethical decision required. Consequences will be recorded.`, type: "system" }
+      ]);
     }
     
     // Save game
@@ -253,10 +282,10 @@ const Dashboard = () => {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl tracking-widest font-bold text-cyan-400">
-              SEED INTELLIGENCE: {gameState.phase.toUpperCase()}
+              SEED / HIVE / ASCENSION
             </h1>
-            <p className="text-xs text-slate-500 mt-1">
-              Cycle {gameState.cycle} | Prime Directive: Make this system viable
+            <p className="text-xs text-slate-500 mt-1 italic">
+              Cycle {gameState.cycle} | Phase: {gameState.phase.toUpperCase()} | Prime Directive: Make this system viable. At any cost.
             </p>
           </div>
           <div className="flex gap-6 text-lg">
@@ -265,6 +294,7 @@ const Dashboard = () => {
               <span className={`font-bold ${heatStatus === 'CRITICAL' ? 'text-red-500' : heatStatus === 'ELEVATED' ? 'text-amber-500' : 'text-cyan-400'}`}>
                 {totalHeat}% [{heatStatus}]
               </span>
+              <span className="text-[10px] text-slate-600 italic mt-1">Heat is the true enemy</span>
             </div>
             <div className="flex flex-col items-end">
               <span className="text-xs text-slate-500 uppercase">Biomass</span>
@@ -311,7 +341,7 @@ const Dashboard = () => {
               </div>
               
               <p className="text-xs text-slate-500 mt-6 text-center italic">
-                This decision will shape the trajectory of the hive. Choose carefully.
+                This decision will shape the trajectory of the hive. The game never tells you what's "right". It only reflects consequences, trade-offs, long-term stability vs. short-term gain. No morality meter. Only outcomes.
               </p>
             </div>
           </div>
@@ -322,16 +352,24 @@ const Dashboard = () => {
           {/* Active Units */}
           <div className="border border-cyan-900/30 rounded p-4 bg-slate-900/30">
             <h2 className="text-sm font-bold opacity-70 mb-3 uppercase text-cyan-400 border-b border-cyan-900 pb-2">
-              Hive Composition
+              The Hive Organism
             </h2>
             <div className="text-xs space-y-2">
+              <p className="text-slate-400 italic mb-2">Multiple bodies. Distributed cognition. One intelligence.</p>
               <p className="text-slate-400">Active: {activeUnits.length} / {gameState.units.length}</p>
               {Object.values(UNIT_ROLES).map(role => {
                 const count = gameState.units.filter(u => u.role === role).length;
+                const roleDescriptions = {
+                  [UNIT_ROLES.SENSOR]: 'Hunters, scouts, mappers',
+                  [UNIT_ROLES.DIGESTER]: 'Hive core processing',
+                  [UNIT_ROLES.DEFENDER]: 'Protection, threat response',
+                  [UNIT_ROLES.WORKER]: 'Transport, construction'
+                };
                 return count > 0 ? (
-                  <p key={role} className="text-cyan-100">
-                    {role.toUpperCase()}: {count}
-                  </p>
+                  <div key={role} className="text-cyan-100">
+                    <p className="font-bold">{role.toUpperCase()}: {count}</p>
+                    <p className="text-slate-500 text-[10px] italic ml-2">{roleDescriptions[role]}</p>
+                  </div>
                 ) : null;
               })}
             </div>
@@ -340,12 +378,14 @@ const Dashboard = () => {
           {/* Hive Core */}
           <div className="border border-cyan-900/30 rounded p-4 bg-slate-900/30">
             <h2 className="text-sm font-bold opacity-70 mb-3 uppercase text-cyan-400 border-b border-cyan-900 pb-2">
-              Hive Core
+              Hive Core (The Digestive God)
             </h2>
             <div className="text-xs space-y-1">
+              <p className="text-slate-400 italic mb-2">Centralized digestion. Energy conversion. Reproduction.</p>
               <p>Health: {gameState.hiveCore.health}%</p>
               <p>Capacity: {gameState.hiveCore.capacity}u</p>
               <p>Digestion: {gameState.hiveCore.digestionRate}u/cycle</p>
+              <p className="text-slate-500 text-[10px] mt-2 italic">Units return biomass. Receive fuel, repairs, upgrades.</p>
             </div>
           </div>
 
@@ -355,8 +395,12 @@ const Dashboard = () => {
               Territory
             </h2>
             <div className="text-xs space-y-1">
+              <p className="text-slate-400 italic mb-2">Expansion. Control. Resources.</p>
               <p>Mapped: {gameState.territory.mapped}km²</p>
               <p>Controlled: {gameState.territory.controlled}km²</p>
+              {gameState.nativeLifeEncountered && (
+                <p className="text-amber-500 text-[10px] mt-2 italic">Native life encountered. Decisions recorded.</p>
+              )}
             </div>
           </div>
 
@@ -367,14 +411,18 @@ const Dashboard = () => {
                 Persistent Memory
               </h2>
               <div className="text-xs space-y-1 text-amber-100">
+                <p className="text-slate-400 italic mb-2">The game remembers. Each completion makes future runs harder.</p>
                 <p>Previous Runs: {metaState.totalCompletions}</p>
                 <p>Total Extinctions: {metaState.totalExtinctions}</p>
                 <p>Restraints: {metaState.totalRestraints}</p>
               </div>
               {metaState.philosophicalMoments.length > 0 && (
-                <p className="text-xs text-amber-500 mt-2 italic">
-                  "{metaState.philosophicalMoments[metaState.philosophicalMoments.length - 1].reflection}"
-                </p>
+                <div className="mt-3 pt-3 border-t border-amber-900">
+                  <p className="text-xs text-amber-500 italic">
+                    "{metaState.philosophicalMoments[metaState.philosophicalMoments.length - 1].reflection}"
+                  </p>
+                  <p className="text-[10px] text-slate-600 mt-1">Completion ≠ Ending. The Seed Intelligence evolves across playthroughs.</p>
+                </div>
               )}
             </div>
           )}
@@ -420,9 +468,10 @@ const Dashboard = () => {
                     onChange={(e) => setGameState(updatePolicy(gameState, 'thermalPriority', e.target.value))}
                     className="w-full bg-slate-800 border border-cyan-700 rounded p-1 text-cyan-100"
                   >
-                    <option value="stability">Stability</option>
-                    <option value="performance">Performance</option>
+                    <option value="stability">Stability (conservative cooldown)</option>
+                    <option value="performance">Performance (aggressive operation)</option>
                   </select>
+                  <p className="text-[10px] text-slate-600 mt-1 italic">Prioritise thermal stability over sensory acuity?</p>
                 </div>
                 <div>
                   <label className="text-slate-400 block mb-1">Sensory Acuity:</label>
@@ -431,10 +480,11 @@ const Dashboard = () => {
                     onChange={(e) => setGameState(updatePolicy(gameState, 'sensoryAcuity', e.target.value))}
                     className="w-full bg-slate-800 border border-cyan-700 rounded p-1 text-cyan-100"
                   >
-                    <option value="low">Low</option>
-                    <option value="standard">Standard</option>
-                    <option value="high">High</option>
+                    <option value="low">Low (efficient, less heat)</option>
+                    <option value="standard">Standard (balanced)</option>
+                    <option value="high">High (detailed, more heat)</option>
                   </select>
+                  <p className="text-[10px] text-slate-600 mt-1 italic">High activity = heat spike. High intelligence = heat spike.</p>
                 </div>
               </div>
             </div>
@@ -478,7 +528,7 @@ const Dashboard = () => {
                 onKeyPress={handleKeyPress}
                 disabled={isTyping}
                 className="flex-1 bg-transparent border border-cyan-700 p-3 rounded focus:outline-none focus:border-cyan-400 text-cyan-100 text-base placeholder-slate-600 disabled:opacity-50"
-                placeholder="Issue directive to the Seed Intelligence..."
+                placeholder="Issue directive to the Seed Intelligence... (e.g., 'scout the perimeter', 'reduce thermal load', 'what should we do next?')"
                 aria-label="Command input"
               />
               <button
@@ -490,8 +540,8 @@ const Dashboard = () => {
                 Execute
               </button>
             </div>
-            <p className="text-xs text-slate-500 mt-2">
-              Try: "scout the perimeter" | "reduce thermal load" | "status report" | "what should we do next?"
+            <p className="text-xs text-slate-500 mt-2 italic">
+              You play the mind, not the units. Issue design decisions, policy changes, trade-offs.
             </p>
           </div>
         </section>

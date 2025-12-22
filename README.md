@@ -1,8 +1,12 @@
 # SEED / HIVE / ASCENSION
 
-> *"If intelligence can design life, is restraint a feature — or a bug?"*
+**Working Title (deliberately flexible)**
+
+> *"Terraforming is just genocide with better PR"*
 
 An AI-powered philosophical game about optimization, evolution, and uncomfortable realizations.
+
+> *"If intelligence can design life, is restraint a feature — or a bug?"*
 
 ## What Is This?
 
