@@ -1,9 +1,9 @@
 /**
  * API Service for communicating with the Gemini AI Worker
- * Worker endpoint: https://asguard.martinbibb.workers.dev
+ * Worker endpoint: https://ai-agent.martinbibb.workers.dev
  */
 
-const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT || 'https://asguard.martinbibb.workers.dev';
+const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT || 'https://ai-agent.martinbibb.workers.dev';
 
 /**
  * Send a command to the Gemini AI worker
