@@ -16,11 +16,21 @@ const Dashboard = () => {
   const [command, setCommand] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const logEndRef = useRef(null);
+  const typewriterCleanupRef = useRef(null);
 
   // Auto-scroll to bottom of log
   useEffect(() => {
     logEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [systemLog]);
+
+  // Cleanup typewriter effect on unmount
+  useEffect(() => {
+    return () => {
+      if (typewriterCleanupRef.current) {
+        typewriterCleanupRef.current();
+      }
+    };
+  }, []);
 
   // Typewriter effect function
   const typewriterEffect = (text, onComplete) => {
@@ -46,6 +56,9 @@ const Dashboard = () => {
         if (onComplete) onComplete();
       }
     }, 30); // 30ms per character for smooth typewriter effect
+
+    // Return cleanup function
+    return () => clearInterval(interval);
   };
 
   // Send command to Cloudflare Worker
@@ -81,12 +94,13 @@ const Dashboard = () => {
 
       const data = await response.json();
       
-      // Use typewriter effect for the response
-      typewriterEffect(data.response || data.message || "No response received.", () => {
+      // Store cleanup function and use typewriter effect for the response
+      typewriterCleanupRef.current = typewriterEffect(data.response || data.message || "No response received.", () => {
         // Update game state if provided
         if (data.heat !== undefined) setHeat(data.heat);
         if (data.biomass !== undefined) setBiomass(data.biomass);
         if (data.units) setActiveUnits(data.units);
+        typewriterCleanupRef.current = null;
       });
 
     } catch (error) {
