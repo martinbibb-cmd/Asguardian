@@ -84,6 +84,23 @@ The API service is located in `src/services/api.js` and handles all communicatio
 }
 ```
 
+## Worker Deployment
+
+The Gemini API worker code is located in the `/worker` directory.
+
+### Deploy the Worker
+
+```bash
+cd worker
+wrangler login
+wrangler secret put GEMINI_API_KEY  # Add your Gemini API key
+wrangler deploy
+```
+
+See [worker/README.md](worker/README.md) for detailed instructions.
+
+**Note:** You need a Gemini API key from https://makersuite.google.com/app/apikey
+
 ## Development
 
 ### Local Development
