@@ -1,0 +1,7 @@
+{
+  "name": "asgardian-game",
+  "compatibility_date": "2025-12-22",
+  "assets": {
+    "directory": "./dist"
+  }
+}
