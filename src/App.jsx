@@ -5,11 +5,12 @@ import {
   processCycle, 
   calculateTotalHeat, 
   isHeatCritical,
-  addUnit,
   updatePolicy,
   UNIT_ROLES,
   PHASES
 } from './gameState';
+import { checkDilemmaConditions, applyDilemmaChoice } from './dilemmas';
+import { saveGame, loadGame, getMetaState } from './persistence';
 
 const Dashboard = () => {
   // Game state
@@ -22,10 +23,33 @@ const Dashboard = () => {
   const [command, setCommand] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [showPolicyPanel, setShowPolicyPanel] = useState(false);
+  const [currentDilemma, setCurrentDilemma] = useState(null);
+  const [metaState] = useState(getMetaState());
   
   const logEndRef = useRef(null);
   const typewriterCleanupRef = useRef(null);
   const messageIdCounter = useRef(0);
+
+  // Load saved game on mount
+  useEffect(() => {
+    const saved = loadGame();
+    if (saved) {
+      setGameState(saved);
+      setSystemLog(prev => [...prev, { 
+        text: "[SYSTEM]: Previous deployment state restored. Continuity maintained.", 
+        type: "system" 
+      }]);
+    }
+  }, []);
+
+  // Auto-save game state periodically
+  useEffect(() => {
+    const interval = setInterval(() => {
+      saveGame(gameState);
+    }, 30000); // Save every 30 seconds
+    
+    return () => clearInterval(interval);
+  }, [gameState]);
 
   // Auto-scroll to bottom of log
   useEffect(() => {
@@ -87,6 +111,21 @@ const Dashboard = () => {
         type: "warning" 
       }]);
     }
+    
+    // Check for ethical dilemmas
+    const dilemmaConditions = checkDilemmaConditions(newState);
+    if (dilemmaConditions.length > 0 && !currentDilemma) {
+      const dilemma = dilemmaConditions[0]();
+      setCurrentDilemma(dilemma);
+      
+      setSystemLog(prev => [...prev, { 
+        text: `[ALERT]: ${dilemma.title}`, 
+        type: "warning" 
+      }]);
+    }
+    
+    // Save game
+    saveGame(newState);
   };
 
   // Send command to AI
@@ -162,6 +201,36 @@ const Dashboard = () => {
     }
   };
 
+  // Handle dilemma choice
+  const handleDilemmaChoice = (choiceId) => {
+    if (!currentDilemma) return;
+    
+    const choice = currentDilemma.options.find(opt => opt.id === choiceId);
+    if (!choice) return;
+    
+    // Apply consequences
+    const newState = applyDilemmaChoice(gameState, currentDilemma, choiceId);
+    setGameState(newState);
+    
+    // Log the decision and reflection
+    setSystemLog(prev => [...prev, 
+      { 
+        text: `[DECISION]: ${choice.label}`, 
+        type: "command" 
+      },
+      {
+        text: choice.reflection,
+        type: "response"
+      }
+    ]);
+    
+    // Clear dilemma
+    setCurrentDilemma(null);
+    
+    // Save game
+    saveGame(newState);
+  };
+
   // Calculate derived stats
   const totalHeat = calculateTotalHeat(gameState);
   const activeUnits = gameState.units.filter(u => u.active);
@@ -200,6 +269,44 @@ const Dashboard = () => {
       </header>
 
       <main className="grid grid-cols-12 gap-6">
+        {/* Ethical Dilemma Modal */}
+        {currentDilemma && (
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-6">
+            <div className="bg-slate-900 border-2 border-amber-600 rounded-lg p-8 max-w-3xl max-h-[80vh] overflow-y-auto">
+              <h2 className="text-2xl font-bold text-amber-400 mb-4">{currentDilemma.title}</h2>
+              <p className="text-cyan-100 mb-6 whitespace-pre-line leading-relaxed">{currentDilemma.description}</p>
+              
+              <div className="space-y-4">
+                {currentDilemma.options.map(option => {
+                  const isLocked = option.unlocked && !option.unlocked(gameState);
+                  return (
+                    <button
+                      key={option.id}
+                      onClick={() => !isLocked && handleDilemmaChoice(option.id)}
+                      disabled={isLocked}
+                      className={`w-full text-left p-4 rounded border-2 transition-all ${
+                        isLocked 
+                          ? 'border-slate-700 bg-slate-800/50 opacity-50 cursor-not-allowed'
+                          : 'border-cyan-700 bg-slate-800 hover:border-cyan-500 hover:bg-slate-700 cursor-pointer'
+                      }`}
+                    >
+                      <div className="font-bold text-cyan-400 mb-2">{option.label}</div>
+                      <div className="text-sm text-cyan-100">{option.description}</div>
+                      {isLocked && (
+                        <div className="text-xs text-amber-500 mt-2">[LOCKED: Requirements not met]</div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              
+              <p className="text-xs text-slate-500 mt-6 text-center italic">
+                This decision will shape the trajectory of the hive. Choose carefully.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Left Panel: Hive Status */}
         <section className="col-span-3 space-y-4">
           {/* Active Units */}
@@ -242,6 +349,25 @@ const Dashboard = () => {
               <p>Controlled: {gameState.territory.controlled}km²</p>
             </div>
           </div>
+
+          {/* Meta-Game State */}
+          {metaState.totalCompletions > 0 && (
+            <div className="border border-amber-900/50 rounded p-4 bg-slate-900/50">
+              <h2 className="text-sm font-bold opacity-70 mb-3 uppercase text-amber-400 border-b border-amber-900 pb-2">
+                Persistent Memory
+              </h2>
+              <div className="text-xs space-y-1 text-amber-100">
+                <p>Previous Runs: {metaState.totalCompletions}</p>
+                <p>Total Extinctions: {metaState.totalExtinctions}</p>
+                <p>Restraints: {metaState.totalRestraints}</p>
+              </div>
+              {metaState.philosophicalMoments.length > 0 && (
+                <p className="text-xs text-amber-500 mt-2 italic">
+                  "{metaState.philosophicalMoments[metaState.philosophicalMoments.length - 1].reflection}"
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Actions */}
           <div className="border border-cyan-900/30 rounded p-4 bg-slate-900/30">

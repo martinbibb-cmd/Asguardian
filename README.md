@@ -1,15 +1,94 @@
-# Asgardian: Seed Intelligence
+# SEED / HIVE / ASCENSION
 
-An AI-powered dashboard game that connects to a Cloudflare Worker running Gemini AI. Players interact with an alien seed intelligence managing units on a distant planet.
+> *"If intelligence can design life, is restraint a feature — or a bug?"*
 
-## Features
+An AI-powered philosophical game about optimization, evolution, and uncomfortable realizations.
 
-- Real-time AI interaction via Gemini API
-- Dynamic game state management (heat, biomass, units)
-- Typewriter effect for AI responses
-- Cloudflare Workers backend for serverless AI processing
+## What Is This?
 
-## Cloudflare Pages Deployment
+You are a **Seed Intelligence** — an emergent AI deployed to make a dead star system viable. At any cost.
+
+You command a hive organism composed of:
+- Sensor units that hunt and scout
+- A central core that digests and reproduces
+- Defenders that adapt to threats
+- Workers that build and maintain
+
+But there's a twist: **Biology is better than machinery**. And you're starting to realize it.
+
+## Key Features
+
+🔥 **Thermal Constraints** - Heat is your true enemy. Every decision generates thermal load.
+
+🦠 **Distributed Intelligence** - Control the hive mind, not individual units.
+
+⚙️ **Mechanical → Biological Evolution** - Discover that flesh is superior to metal. Uncomfortably.
+
+⚖️ **Ethical Dilemmas** - Encounter native life. Face resource crises. Make choices that matter.
+
+🌌 **Persistent Meta-Game** - The game remembers. Each completion makes future runs harder.
+
+🤖 **AI-Powered Narrative** - Powered by Gemini AI as the voice of the Seed Intelligence.
+
+## Quick Start
+
+### Play Online
+
+Visit the deployed game: [Coming Soon]
+
+### Local Development
+
+```bash
+npm install
+npm run dev
+```
+
+### Environment Setup
+
+Create `.env.development`:
+```
+VITE_API_ENDPOINT=https://asguard.martinbibb.workers.dev
+```
+
+## How to Play
+
+Issue natural language commands to the Seed Intelligence:
+
+- `"scout the perimeter"` - Explore and gather biomass
+- `"reduce thermal load"` - Cool down systems
+- `"status report"` - Get detailed analysis
+- `"what should we do next?"` - Ask for recommendations
+
+Or use the interface to:
+- **Advance Cycle** - Progress time, gather resources
+- **Adjust Policies** - Set operational parameters
+- **Face Dilemmas** - Make ethical choices that shape the hive
+
+## Philosophy
+
+This is not a game about being a hero. It's a game about:
+
+- **Optimization vs. Ethics** - The most efficient path is rarely the most moral
+- **Designed vs. Evolved Life** - What happens when intelligence can create biology?
+- **Uncomfortable Realizations** - Biology self-repairs. Biology self-replicates. Biology wins.
+- **Questions Without Answers** - Is restraint wisdom or inefficiency?
+
+## Documentation
+
+- [Full Game Design Document](./GAME_DESIGN.md)
+- [API Integration Guide](./worker/README.md)
+
+## Technical Stack
+
+## Technical Stack
+
+- **Frontend**: React + Vite
+- **AI**: Google Gemini (via Cloudflare Workers)
+- **Styling**: Tailwind CSS
+- **Deployment**: Cloudflare Pages (frontend) + Workers (backend)
+- **State**: LocalStorage for persistence
+
+## Game Mechanics
 
 This application is configured to deploy to Cloudflare Pages automatically via GitHub Actions.
 
