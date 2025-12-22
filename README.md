@@ -76,6 +76,7 @@ This is not a game about being a hero. It's a game about:
 ## Documentation
 
 - [Full Game Design Document](./GAME_DESIGN.md)
+- [Deployment Guide](./DEPLOYMENT.md)
 - [API Integration Guide](./worker/README.md)
 
 ## Technical Stack
@@ -92,19 +93,22 @@ This is not a game about being a hero. It's a game about:
 
 This application is configured to deploy to Cloudflare Pages automatically via GitHub Actions.
 
-### Setup Required
+### Quick Setup
 
-To enable automatic deployments, add the following secrets to your GitHub repository:
+To enable automatic deployments, add these secrets to your GitHub repository:
 
-1. **CLOUDFLARE_API_TOKEN**: Create an API token at https://developers.cloudflare.com/fundamentals/api/get-started/create-token/
-   - Use the "Edit Cloudflare Workers" template or create a custom token with:
-     - Account: Cloudflare Pages (Edit permission)
+1. **CLOUDFLARE_API_TOKEN** - Create at [Cloudflare API Tokens](https://dash.cloudflare.com/profile/api-tokens)
+2. **CLOUDFLARE_ACCOUNT_ID** - Find in your Cloudflare dashboard URL
 
-2. **CLOUDFLARE_ACCOUNT_ID**: Find this in your Cloudflare dashboard URL or account settings
+See **[DEPLOYMENT.md](./DEPLOYMENT.md)** for detailed setup instructions.
 
-To add these secrets:
-1. Go to your GitHub repository → Settings → Secrets and variables → Actions
-2. Click "New repository secret" for each secret above
+### Verify Setup
+
+Run the verification script to check your configuration:
+
+```bash
+./verify-deployment-setup.sh
+```
 
 ### Deployment
 
