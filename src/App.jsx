@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-
-const API_ENDPOINT = 'https://ai-agent.martinbibb.workers.dev';
+import { sendCommand as sendApiCommand } from './services/api';
 
 const Dashboard = () => {
   const [heat, setHeat] = useState(12);
@@ -77,26 +76,11 @@ const Dashboard = () => {
     setIsTyping(true);
 
     try {
-      const response = await fetch(API_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          message: userCommand,
-          context: {
-            heat,
-            biomass,
-            units: activeUnits
-          }
-        }),
+      const data = await sendApiCommand(userCommand, {
+        heat,
+        biomass,
+        units: activeUnits
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
       
       // Store cleanup function and use typewriter effect for the response
       typewriterCleanupRef.current = typewriterEffect(data.response || data.message || "No response received.", () => {
