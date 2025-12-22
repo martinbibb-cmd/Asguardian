@@ -1,6 +1,13 @@
-# React + Vite
+# Asgardian: Seed Intelligence
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An AI-powered dashboard game that connects to a Cloudflare Worker running Gemini AI. Players interact with an alien seed intelligence managing units on a distant planet.
+
+## Features
+
+- Real-time AI interaction via Gemini API
+- Dynamic game state management (heat, biomass, units)
+- Typewriter effect for AI responses
+- Cloudflare Workers backend for serverless AI processing
 
 ## Cloudflare Pages Deployment
 
@@ -32,7 +39,59 @@ npm run pages:deploy
 ```
 (Requires `CLOUDFLARE_API_TOKEN` environment variable or `wrangler login`)
 
+## API Integration
+
+This app connects to a Cloudflare Worker that provides Gemini AI capabilities:
+
+**Worker URL**: `https://asguard.martinbibb.workers.dev`
+
+### Environment Variables
+
+The API endpoint is configured via environment variables:
+
+- **Development**: Uses `.env.development`
+- **Production**: Uses `.env.production`
+
+To customize the endpoint:
+```bash
+# .env.development
+VITE_API_ENDPOINT=https://asguard.martinbibb.workers.dev
+```
+
+The API service is located in `src/services/api.js` and handles all communication with the worker.
+
+### API Request Format
+
+```json
+{
+  "message": "user command",
+  "context": {
+    "heat": 12,
+    "biomass": 450,
+    "units": ["Scavenger_Mech_01", "Scavenger_Mech_02", "Scavenger_Mech_03"]
+  }
+}
+```
+
+### API Response Format
+
+```json
+{
+  "response": "AI generated response",
+  "heat": 12,
+  "biomass": 450,
+  "units": ["unit1", "unit2"]
+}
+```
+
 ## Development
+
+### Local Development
+
+```bash
+npm install
+npm run dev
+```
 
 Currently, two official plugins are available:
 
