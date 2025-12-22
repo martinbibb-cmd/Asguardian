@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 
+const API_ENDPOINT = 'https://ai-agent.martinbibb.workers.dev';
+
 const Dashboard = () => {
   const [heat, setHeat] = useState(12);
   const [biomass, setBiomass] = useState(450);
@@ -17,6 +19,7 @@ const Dashboard = () => {
   const [isTyping, setIsTyping] = useState(false);
   const logEndRef = useRef(null);
   const typewriterCleanupRef = useRef(null);
+  const messageIdCounter = useRef(0);
 
   // Auto-scroll to bottom of log
   useEffect(() => {
@@ -35,7 +38,8 @@ const Dashboard = () => {
   // Typewriter effect function
   const typewriterEffect = (text, onComplete) => {
     let index = 0;
-    const tempId = Date.now();
+    messageIdCounter.current += 1;
+    const tempId = `msg-${messageIdCounter.current}`;
     
     // Add empty message first
     setSystemLog(prev => [...prev, { text: "", type: "response", id: tempId }]);
@@ -73,7 +77,7 @@ const Dashboard = () => {
     setIsTyping(true);
 
     try {
-      const response = await fetch('https://ai-agent.martinbibb.workers.dev', {
+      const response = await fetch(API_ENDPOINT, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
