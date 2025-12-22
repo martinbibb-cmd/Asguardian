@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "pages:build": "vite build",
+    "pages:deploy": "wrangler versions upload"
   },
   "dependencies": {
     "react": "^19.2.0",
@@ -26,6 +28,7 @@
     "globals": "^16.5.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
-    "vite": "^7.2.4"
+    "vite": "^7.2.4",
+    "wrangler": "^4.56.0"
   }
 }
