@@ -91,36 +91,28 @@ This is not a game about being a hero. It's a game about:
 
 ## Game Mechanics
 
-This application is configured to deploy to Cloudflare Pages automatically via GitHub Actions.
+This application is configured to deploy to GitHub Pages automatically via GitHub Actions.
 
 ### Quick Setup
 
-To enable automatic deployments, add these secrets to your GitHub repository:
+The deployment is automatic and requires no additional setup! The GitHub Actions workflow will:
+- Build and deploy to GitHub Pages on every push to `main`/`master`
+- The site will be available at `https://<username>.github.io/<repository-name>/`
 
-1. **CLOUDFLARE_API_TOKEN** - Create at [Cloudflare API Tokens](https://dash.cloudflare.com/profile/api-tokens)
-2. **CLOUDFLARE_ACCOUNT_ID** - Find in your Cloudflare dashboard URL
+To enable GitHub Pages:
+1. Go to your repository **Settings** → **Pages**
+2. Under **Source**, select **GitHub Actions**
+3. The workflow will automatically deploy on the next push
 
 See **[DEPLOYMENT.md](./DEPLOYMENT.md)** for detailed setup instructions.
-
-### Verify Setup
-
-Run the verification script to check your configuration:
-
-```bash
-./verify-deployment-setup.sh
-```
 
 ### Deployment
 
 The GitHub Actions workflow will automatically:
-- Build and deploy to Cloudflare Pages on every push to `main`/`master`
-- Create preview deployments for pull requests
+- Build the application
+- Deploy to GitHub Pages on every push to `main`/`master`
 
-You can also deploy manually using:
-```bash
-npm run pages:deploy
-```
-(Requires `CLOUDFLARE_API_TOKEN` environment variable or `wrangler login`)
+No API tokens or secrets required!
 
 ## API Integration
 
