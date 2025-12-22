@@ -4,16 +4,33 @@ This template provides a minimal setup to get React working in Vite with HMR and
 
 ## Cloudflare Pages Deployment
 
-This application is configured to deploy to Cloudflare Pages. To deploy successfully, configure your Cloudflare Pages project with the following settings:
+This application is configured to deploy to Cloudflare Pages automatically via GitHub Actions.
 
-- **Build command**: `npm run build`
-- **Build output directory**: `dist`
-- **Deploy command**: Leave empty (or use `npx wrangler versions upload` if using versioned deployments)
+### Setup Required
 
-The build process will:
-1. Install dependencies via `npm clean-install`
-2. Build the application via `npm run build` (creates the `dist` directory)
-3. Deploy the `dist` directory to Cloudflare Pages
+To enable automatic deployments, add the following secrets to your GitHub repository:
+
+1. **CLOUDFLARE_API_TOKEN**: Create an API token at https://developers.cloudflare.com/fundamentals/api/get-started/create-token/
+   - Use the "Edit Cloudflare Workers" template or create a custom token with:
+     - Account: Cloudflare Pages (Edit permission)
+
+2. **CLOUDFLARE_ACCOUNT_ID**: Find this in your Cloudflare dashboard URL or account settings
+
+To add these secrets:
+1. Go to your GitHub repository → Settings → Secrets and variables → Actions
+2. Click "New repository secret" for each secret above
+
+### Deployment
+
+The GitHub Actions workflow will automatically:
+- Build and deploy to Cloudflare Pages on every push to `main`/`master`
+- Create preview deployments for pull requests
+
+You can also deploy manually using:
+```bash
+npm run pages:deploy
+```
+(Requires `CLOUDFLARE_API_TOKEN` environment variable or `wrangler login`)
 
 ## Development
 
