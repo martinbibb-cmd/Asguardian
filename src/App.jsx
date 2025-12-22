@@ -11,6 +11,7 @@ import {
 } from './gameState';
 import { checkDilemmaConditions, applyDilemmaChoice } from './dilemmas';
 import { saveGame, loadGame, getMetaState } from './persistence';
+import { generateSystemReport } from './schematics';
 
 const Dashboard = () => {
   // Game state
@@ -231,6 +232,15 @@ const Dashboard = () => {
     saveGame(newState);
   };
 
+  // Generate system report
+  const showSystemReport = () => {
+    const report = generateSystemReport(gameState);
+    setSystemLog(prev => [...prev, { 
+      text: report, 
+      type: "system" 
+    }]);
+  };
+
   // Calculate derived stats
   const totalHeat = calculateTotalHeat(gameState);
   const activeUnits = gameState.units.filter(u => u.active);
@@ -386,6 +396,12 @@ const Dashboard = () => {
                 className="w-full bg-slate-800 hover:bg-slate-700 text-cyan-100 px-3 py-2 rounded text-xs font-bold uppercase transition-colors"
               >
                 Policy Settings
+              </button>
+              <button
+                onClick={showSystemReport}
+                className="w-full bg-slate-800 hover:bg-slate-700 text-cyan-100 px-3 py-2 rounded text-xs font-bold uppercase transition-colors"
+              >
+                System Report
               </button>
             </div>
           </div>
