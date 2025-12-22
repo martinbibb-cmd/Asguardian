@@ -1,5 +1,9 @@
 name = "asguardian-app"
 compatibility_date = "2024-12-22"
 
-# Cloudflare Pages configuration
+# Cloudflare Pages configuration for GitHub Actions deployments
 pages_build_output_dir = "dist"
+
+# Assets configuration for wrangler CLI deployments (manual or CI custom commands)
+[assets]
+directory = "dist"
