@@ -6,4 +6,4 @@ pages_build_output_dir = "dist"
 
 # Assets configuration for wrangler deployment
 [assets]
-directory = "./dist"
+directory = "dist"
