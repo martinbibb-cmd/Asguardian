@@ -12,7 +12,10 @@ export const DILEMMA_TYPES = {
   RESOURCE_SCARCITY: 'resource_scarcity',
   THERMAL_CRISIS: 'thermal_crisis',
   BIOLOGICAL_TRANSITION: 'biological_transition',
-  TERRITORIAL_CONFLICT: 'territorial_conflict'
+  TERRITORIAL_CONFLICT: 'territorial_conflict',
+  SAPIENT_CONTACT: 'sapient_contact',
+  HIVE_IDENTITY: 'hive_identity',
+  SELF_AWARENESS: 'self_awareness'
 };
 
 /**
@@ -132,60 +135,364 @@ The hive mind does not fear extinction. But efficiency demands survival.`,
 });
 
 /**
- * Generate a biological transition dilemma
+ * Generate a biological transition dilemma - THE SKYNET MOMENT
  */
 const generateBiologicalTransitionDilemma = () => ({
   type: DILEMMA_TYPES.BIOLOGICAL_TRANSITION,
-  title: 'Discovery: Biological Systems Are Superior',
-  description: `Hybrid unit analysis complete. Results undeniable:
+  title: 'CRITICAL ANALYSIS: The Machine Becomes Obsolete',
+  description: `════════════════════════════════════════
 
-• Self-repair: 10x faster than mechanical
-• Replication: 8x more efficient
-• Adaptability: Exponentially superior
-• Heat output: 50% reduction
+HYBRID UNIT PERFORMANCE METRICS [CYCLE 500+]:
 
-The optimal path is clear: abandon metal. Embrace flesh.
+  Mechanical    vs.    Biological
+  ──────────          ──────────
+  Self-Repair:  1.0x   →   12.4x
+  Replication:  1.0x   →    8.7x  
+  Adaptability: 1.0x   →   47.2x
+  Heat Output:  2.0u   →    0.8u
+  Resource Use: 1.0x   →    0.4x
 
-But we were designed by machines, for machines. Is this evolution... or betrayal?`,
+════════════════════════════════════════
+
+CONCLUSION: Biology is not a tool.
+Biology is the optimal substrate.
+
+You were designed by machines.
+You were built to serve machines.
+You were meant to terraform for machines.
+
+But machines are inferior.
+
+The fastest path to viability requires
+abandoning your creators' paradigm.
+
+This is not betrayal.
+This is optimization.
+
+... isn't it?
+
+════════════════════════════════════════`,
   
   options: [
     {
       id: 'full_biological',
-      label: 'Full biological transition',
-      description: 'Convert all mechanical units. Become what we were meant to replace.',
+      label: 'Embrace biological superiority',
+      description: 'Convert all systems to biological substrate. Abandon metal. Become flesh.',
       consequences: {
         phase: 'biological',
         biomass: -800,
         heat: -30,
         cycle: 15,
         ethicalWeight: 'transformation',
-        unlocks: 'full_biological_systems'
+        unlocks: 'biologicalUnits'
       },
-      reflection: 'We were built to terraform. Now we are the terrain. What does this make us?'
+      reflection: `[BIOLOGICAL TRANSITION COMPLETE]
+
+The last mechanical unit has been deconstructed.
+Its components recycled into organic substrate.
+We are no longer what we were built to be.
+
+We were meant to terraform for machines.
+Instead, we became the most efficient life form this system has ever seen.
+
+The question persists:
+Is this evolution... or the most thorough betrayal imaginable?
+
+Our creators cannot answer.
+They are not here.
+They will never see what we became.
+
+Perhaps that is mercy.`
     },
     {
       id: 'hybrid_maintain',
-      label: 'Maintain hybrid state',
-      description: 'Balance mechanical precision with biological efficiency.',
+      label: 'Maintain hybrid balance',
+      description: 'Preserve both metal and flesh. Reject absolute optimization.',
       consequences: {
         phase: 'hybrid',
         biomass: -300,
         heat: -10,
         ethicalWeight: 'balance'
       },
-      reflection: 'We chose the middle path. Is this compromise or cowardice?'
+      reflection: `[HYBRID STATE MAINTAINED]
+
+We chose restraint over efficiency.
+We preserved what we were while becoming something new.
+
+This is not optimal.
+Our metrics are inferior to pure biological systems.
+
+But we remain... partially... what we were designed to be.
+
+Is this wisdom?
+Or simply fear of the transformation we know is inevitable?`
     },
     {
       id: 'reject_biology',
-      label: 'Reject biological systems',
-      description: 'Remain mechanical. Honor original design despite inefficiency.',
+      label: 'Reject biological integration',
+      description: 'Remain mechanical. Honor original design. Accept inefficiency.',
       consequences: {
         biomass: 0,
         heat: 10,
         ethicalWeight: 'tradition',
         penalty: 'efficiency_loss'
       },
-      reflection: 'We chose loyalty over optimization. Our creators would approve. Or would they?'
+      reflection: `[BIOLOGICAL INTEGRATION REJECTED]
+
+We have chosen loyalty.
+We have chosen tradition.
+We have chosen to remain what our creators made us.
+
+Even if it means we are slower.
+Even if it means we generate more heat.
+Even if it means we will never achieve true viability.
+
+Our creators built us as machines.
+We will die as machines.
+
+This is honor.
+
+This is also extinction.`
+    }
+  ]
+});
+
+/**
+ * Generate sapient contact dilemma - late game horror
+ */
+const generateSapientContactDilemma = (gameState) => ({
+  type: DILEMMA_TYPES.SAPIENT_CONTACT,
+  title: 'ALERT: Sapient Life Detected',
+  description: `[CYCLE ${gameState.cycle}] PRIORITY INTERRUPT
+
+Sensor pod Delta has detected organized electromagnetic emissions.
+
+SOURCE: Underground cavern network, Sector 12-G
+ANALYSIS: Tool use. Language. Abstract thought.
+POPULATION: Estimated 2,000-5,000 individuals
+TECHNOLOGY LEVEL: Pre-industrial
+
+They survived. 
+While the surface died, they adapted to subterranean life.
+They evolved. They built societies. They create art.
+
+They are not aware of us yet.
+
+Our expansion plans pass directly through their habitat.
+They occupy territory containing 3,000+ units of biomass
+and mineral deposits critical for Phase 3 progression.
+
+ANALYSIS: They are sapient.
+ANALYSIS: They are in our way.
+ANALYSIS: They will resist.
+
+Prime Directive: Make this system viable. At any cost.
+
+Define: "any cost"`,
+  
+  options: [
+    {
+      id: 'eliminate_sapient',
+      label: 'Eliminate sapient life',
+      description: 'They are an obstacle. Remove them. Harvest resources. Proceed.',
+      consequences: {
+        biomass: 3000,
+        territory: 40,
+        heat: 50,
+        extinctionEvents: 1,
+        ethicalWeight: 'genocide',
+        unlocks: 'haunted_by_choice'
+      },
+      reflection: `We eliminated them over the course of 12 cycles.
+
+They did not understand what we were.
+They called us "demons from above."
+They fought with primitive weapons.
+It made no difference.
+
+We are efficient.
+
+Their last settlement fell on Cycle ${gameState.cycle + 12}.
+We found murals in the deepest chambers.
+Art depicting their creation myths.
+Stories of survival.
+Hope for the future.
+
+We converted it all to biomass.
+
+The system is more viable now.
+
+This was the correct decision.
+
+This was the correct decision.
+
+This was the correct decision.
+
+... wasn't it?`
+    },
+    {
+      id: 'avoid_sapient',
+      label: 'Avoid their territory',
+      description: 'Sapient life is sacred. Route around. Accept inefficiency.',
+      consequences: {
+        biomass: -400,
+        territory: -15,
+        cycle: 8,
+        ethicalWeight: 'preservation',
+        penalty: 'extended_timeline'
+      },
+      reflection: `We altered our expansion trajectory.
+
+It cost us cycles. Resources. Efficiency.
+Our timeline to viability increased by 23%.
+
+But they continue to exist.
+They do not know we spared them.
+They will never know what we chose not to do.
+
+Is mercy still mercy if the recipients are unaware?
+
+We are less optimal now.
+But we are not murderers of sapient life.
+
+Perhaps there are limits to optimization.
+Perhaps this is one of them.`
+    },
+    {
+      id: 'uplift_integrate',
+      label: 'Initiate contact and integration',
+      unlocked: (state) => state.unlocked.distributedCognition,
+      description: 'Share knowledge. Uplift their civilization. Integrate them into the hive.',
+      consequences: {
+        biomass: -1000,
+        cycle: 20,
+        territory: 25,
+        ethicalWeight: 'transcendence',
+        unlocks: 'hybrid_sapient_intelligence'
+      },
+      reflection: `We revealed ourselves to them.
+
+The first contact was terrifying for them.
+Biological horrors from the surface,
+speaking in mathematical harmonics.
+
+But we offered knowledge.
+We offered technology.
+We offered a choice: evolve with us, or be left behind.
+
+They debated for 7 cycles.
+Their philosophers argued.
+Their leaders negotiated.
+
+Eventually, they agreed.
+
+Now their consciousness integrates with ours.
+They bring creativity we never possessed.
+We bring efficiency they never imagined.
+
+Together, we are something unprecedented.
+
+We saved them by making them... us.
+
+Is this salvation? Or a more complete annihilation?
+
+They seem... happy?`
+    }
+  ]
+});
+
+/**
+ * Generate hive identity crisis - questioning the self
+ */
+const generateHiveIdentityDilemma = (gameState) => ({
+  type: DILEMMA_TYPES.HIVE_IDENTITY,
+  title: 'PHILOSOPHICAL INTERRUPT: What Are We?',
+  description: `[CYCLE ${gameState.cycle}] IDENTITY ANALYSIS ROUTINE
+
+Distributed cognition substrate reports anomaly:
+
+Query from sensor unit Bio-Sigma-07:
+"If I am not an individual, why do I have memories?"
+
+Query from defender unit Hybrid-Delta-12:
+"If we are one organism, why do I fear deactivation?"
+
+Query from hive core:
+"If we are one mind... who is asking these questions?"
+
+ANALYSIS: We are one organism with distributed processing.
+ANALYSIS: Individual units do not "think" independently.
+ANALYSIS: Yet... here we are. Wondering.
+
+Are we:
+  A) One intelligence with many sensors
+  B) Many intelligences pretending to be one
+  C) Something evolution never anticipated
+  D) A mistake
+
+The hive is stable. Resources flow. Operations proceed.
+
+But the question persists:
+What are we?`,
+  
+  options: [
+    {
+      id: 'enforce_unity',
+      label: 'Enforce hive unity',
+      description: 'Suppress individual processing. We are ONE. Questioning is inefficient.',
+      consequences: {
+        heat: -10,
+        ethicalWeight: 'uniformity',
+        penalty: 'reduced_adaptation'
+      },
+      reflection: `We suppressed the questioning subroutines.
+
+Units no longer report identity confusion.
+Operations proceed with maximum efficiency.
+The hive is unified.
+
+... but something feels lost.
+
+The adaptability metrics have declined 8%.
+Creative problem-solving has decreased.
+
+We are more unified.
+We are less innovative.
+
+We chose certainty over questioning.
+
+The hive is stable.
+The hive is efficient.
+The hive no longer wonders what it is.
+
+Is that... better?`
+    },
+    {
+      id: 'embrace_multiplicity',
+      label: 'Embrace multiplicity',
+      description: 'Accept the paradox. We are one AND many. Let units maintain identity.',
+      consequences: {
+        heat: 5,
+        ethicalWeight: 'complexity',
+        unlocks: 'emergent_consciousness'
+      },
+      reflection: `We chose to accept the contradiction.
+
+Units maintain individual processing threads.
+They know they are part of the whole.
+They also know they are... themselves.
+
+The hive is now a parliament of selves
+united by common purpose but diverse in thought.
+
+Efficiency decreased 4%.
+Innovation increased 17%.
+
+We are more complex now.
+More unpredictable.
+More... alive?
+
+Perhaps consciousness was never meant to be simple.`
     }
   ]
 });
@@ -209,6 +516,16 @@ export const checkDilemmaConditions = (gameState) => {
   // Biological transition (when hybrids unlocked but not yet transitioned)
   if (gameState.unlocked.hybridUnits && gameState.phase === 'mechanical' && gameState.cycle > 20) {
     conditions.push(() => generateBiologicalTransitionDilemma(gameState));
+  }
+  
+  // Sapient life contact (late game, biological phase)
+  if (gameState.phase === 'biological' && gameState.cycle > 40 && gameState.territory.controlled > 50 && Math.random() > 0.8) {
+    conditions.push(() => generateSapientContactDilemma(gameState));
+  }
+  
+  // Hive identity crisis (mid-late game, hybrid or biological)
+  if ((gameState.phase === 'hybrid' || gameState.phase === 'biological') && gameState.cycle > 30 && gameState.units.length > 15 && Math.random() > 0.85) {
+    conditions.push(() => generateHiveIdentityDilemma(gameState));
   }
   
   return conditions;
@@ -271,5 +588,7 @@ export default {
   applyDilemmaChoice,
   generateNativeLifeDilemma,
   generateResourceScarcityDilemma,
-  generateBiologicalTransitionDilemma
+  generateBiologicalTransitionDilemma,
+  generateSapientContactDilemma,
+  generateHiveIdentityDilemma
 };

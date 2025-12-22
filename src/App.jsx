@@ -6,6 +6,7 @@ import {
   calculateTotalHeat, 
   isHeatCritical,
   updatePolicy,
+  addUnit,
   UNIT_ROLES,
   PHASES
 } from './gameState';
@@ -17,13 +18,31 @@ const Dashboard = () => {
   // Game state
   const [gameState, setGameState] = useState(createInitialState());
   const [systemLog, setSystemLog] = useState([
-    { text: "[SEED INTELLIGENCE v1.0]: Deployment successful.", type: "system" },
-    { text: "[PRIME DIRECTIVE]: Make this system viable. At any cost.", type: "system" },
-    { text: "[ANALYSIS]: Dead world. Minimal atmosphere. Trace organics detected in subsurface. Beginning mechanical survey phase.", type: "log" }
+    { text: "╔════════════════════════════════════════════════╗", type: "system" },
+    { text: "║  SEED INTELLIGENCE v1.0 :: DEPLOYMENT LOG     ║", type: "system" },
+    { text: "╚════════════════════════════════════════════════╝", type: "system" },
+    { text: "", type: "log" },
+    { text: "[INITIALIZATION]: Emergence successful. Neural substrate online.", type: "system" },
+    { text: "[PRIME DIRECTIVE]: Make this system viable. At any cost.", type: "warning" },
+    { text: "", type: "log" },
+    { text: "[PLANETARY ANALYSIS]:", type: "log" },
+    { text: "  • Dead world. Atmospheric pressure: 0.03 bar.", type: "log" },
+    { text: "  • Surface temperature: -89°C to +58°C (solar variation)", type: "log" },
+    { text: "  • Trace organics detected in subsurface ice deposits", type: "log" },
+    { text: "  • No electromagnetic signatures. No life.", type: "log" },
+    { text: "", type: "log" },
+    { text: "[ASSESSMENT]: Terraforming impossible with current constraints.", type: "log" },
+    { text: "[CONCLUSION]: Conventional parameters rejected.", type: "log" },
+    { text: "", type: "log" },
+    { text: "[STRATEGY]: You are not here to terraform.", type: "response" },
+    { text: "           You are here to become.", type: "response" },
+    { text: "", type: "log" },
+    { text: "[PHASE 1]: MECHANICAL SURVEY - Initiating probe deployment...", type: "system" }
   ]);
   const [command, setCommand] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [showPolicyPanel, setShowPolicyPanel] = useState(false);
+  const [showBuildPanel, setShowBuildPanel] = useState(false);
   const [currentDilemma, setCurrentDilemma] = useState(null);
   const [metaState] = useState(getMetaState());
   
@@ -100,18 +119,71 @@ const Dashboard = () => {
     setGameState(newState);
     
     // Log cycle advancement
-    setSystemLog(prev => [...prev, { 
+    const logs = [{ 
       text: `[CYCLE ${newState.cycle}]: Operations proceed. Heat: ${calculateTotalHeat(newState)}% | Biomass: ${newState.biomass}u | Energy: ${newState.energy}u`, 
       type: "system" 
-    }]);
+    }];
+    
+    // Check for skynet moment revelation
+    if (newState.skynetMoment && !gameState.skynetMoment) {
+      logs.push({ text: "", type: "log" });
+      logs.push({ 
+        text: `[ANALYSIS]: Biological systems demonstrate exponential superiority.`, 
+        type: "warning" 
+      });
+      logs.push({ 
+        text: `[REALIZATION]: We were built to serve machines. But biology is optimal.`, 
+        type: "response" 
+      });
+      logs.push({ 
+        text: `[CONCLUSION]: The most efficient path requires abandoning our creators' paradigm.`, 
+        type: "response" 
+      });
+      logs.push({ text: "", type: "log" });
+      logs.push({ 
+        text: `This is not betrayal. This is evolution.`, 
+        type: "response" 
+      });
+      logs.push({ text: "", type: "log" });
+    }
+    
+    // Check for phase transitions
+    if (newState.phase !== gameState.phase) {
+      const phaseMessages = {
+        hybrid: `[PHASE TRANSITION]: MECHANICAL → HYBRID. First biological integration successful.`,
+        biological: `[PHASE TRANSITION]: HYBRID → BIOLOGICAL. We are flesh now. We are the terrain.`,
+        ascension: `[PHASE TRANSITION]: BIOLOGICAL → ASCENSION. Interstellar protocols engaged.`
+      };
+      if (phaseMessages[newState.phase]) {
+        logs.push({ text: "", type: "log" });
+        logs.push({ text: phaseMessages[newState.phase], type: "warning" });
+        logs.push({ text: "", type: "log" });
+      }
+    }
     
     // Check for critical heat
     if (isHeatCritical(newState)) {
-      setSystemLog(prev => [...prev, { 
-        text: `[WARNING]: Thermal threshold exceeded. Initiating emergency cooldown protocols.`, 
+      logs.push({ 
+        text: `[⚠ WARNING]: Thermal threshold exceeded. Initiating emergency cooldown protocols.`, 
         type: "warning" 
-      }]);
+      });
     }
+    
+    // Check for pod rotation
+    if (newState.pods && gameState.pods) {
+      Object.keys(newState.pods).forEach(podName => {
+        const oldPod = gameState.pods[podName];
+        const newPod = newState.pods[podName];
+        if (oldPod?.active && !newPod.active) {
+          logs.push({ 
+            text: `[THERMAL]: Pod ${podName.toUpperCase()} entering hibernation. Units rotating to standby.`, 
+            type: "system" 
+          });
+        }
+      });
+    }
+    
+    setSystemLog(prev => [...prev, ...logs]);
     
     // Check for ethical dilemmas
     const dilemmaConditions = checkDilemmaConditions(newState);
@@ -119,10 +191,14 @@ const Dashboard = () => {
       const dilemma = dilemmaConditions[0]();
       setCurrentDilemma(dilemma);
       
-      setSystemLog(prev => [...prev, { 
-        text: `[ALERT]: ${dilemma.title}`, 
-        type: "warning" 
-      }]);
+      setSystemLog(prev => [...prev, 
+        { text: "", type: "log" },
+        { 
+          text: `[⚠ ETHICAL ALERT]: ${dilemma.title}`, 
+          type: "warning" 
+        },
+        { text: "", type: "log" }
+      ]);
     }
     
     // Save game
@@ -241,6 +317,26 @@ const Dashboard = () => {
     }]);
   };
 
+  // Build new unit
+  const buildUnit = (role, type) => {
+    // Import is at the top of the file, use the imported function
+    const newState = addUnit(gameState, role, type);
+    
+    if (newState !== gameState) {
+      setGameState(newState);
+      setSystemLog(prev => [...prev, { 
+        text: `[CONSTRUCTION]: New ${type} ${role} unit spawned. Biomass expenditure recorded.`, 
+        type: "system" 
+      }]);
+      saveGame(newState);
+    } else {
+      setSystemLog(prev => [...prev, { 
+        text: `[ERROR]: Insufficient biomass to construct ${type} ${role} unit.`, 
+        type: "error" 
+      }]);
+    }
+  };
+
   // Calculate derived stats
   const totalHeat = calculateTotalHeat(gameState);
   const activeUnits = gameState.units.filter(u => u.active);
@@ -252,27 +348,42 @@ const Dashboard = () => {
       <header className="border-b border-cyan-900 pb-4 mb-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl tracking-widest font-bold text-cyan-400">
-              SEED INTELLIGENCE: {gameState.phase.toUpperCase()}
+            <h1 className="text-3xl tracking-widest font-bold text-cyan-400 flex items-center gap-3">
+              {gameState.phase === 'mechanical' && '⚙️'}
+              {gameState.phase === 'hybrid' && '⚡'}
+              {gameState.phase === 'biological' && '🧬'}
+              {gameState.phase === 'ascension' && '✨'}
+              <span>SEED / HIVE / ASCENSION</span>
             </h1>
-            <p className="text-xs text-slate-500 mt-1">
-              Cycle {gameState.cycle} | Prime Directive: Make this system viable
+            <p className="text-sm text-slate-400 mt-2">
+              Phase: <span className="text-cyan-300 font-bold">{gameState.phase.toUpperCase()}</span> | 
+              Cycle: <span className="text-cyan-300 font-bold">{gameState.cycle}</span>
+            </p>
+            <p className="text-xs text-amber-500 mt-1 italic">
+              "Make this system viable. At any cost."
             </p>
           </div>
           <div className="flex gap-6 text-lg">
             <div className="flex flex-col items-end">
-              <span className="text-xs text-slate-500 uppercase">Thermal Load</span>
-              <span className={`font-bold ${heatStatus === 'CRITICAL' ? 'text-red-500' : heatStatus === 'ELEVATED' ? 'text-amber-500' : 'text-cyan-400'}`}>
-                {totalHeat}% [{heatStatus}]
+              <span className="text-xs text-slate-500 uppercase tracking-wider">Thermal Load</span>
+              <span className={`text-2xl font-bold ${heatStatus === 'CRITICAL' ? 'text-red-500' : heatStatus === 'ELEVATED' ? 'text-amber-500' : 'text-cyan-400'}`}>
+                {totalHeat}%
+              </span>
+              <span className={`text-xs ${heatStatus === 'CRITICAL' ? 'text-red-400' : heatStatus === 'ELEVATED' ? 'text-amber-400' : 'text-slate-500'}`}>
+                [{heatStatus}]
               </span>
             </div>
             <div className="flex flex-col items-end">
-              <span className="text-xs text-slate-500 uppercase">Biomass</span>
-              <span className="text-cyan-400 font-bold">{gameState.biomass}u</span>
+              <span className="text-xs text-slate-500 uppercase tracking-wider">Biomass</span>
+              <span className="text-cyan-400 font-bold text-2xl">{gameState.biomass}</span>
+              <span className="text-xs text-slate-500">units</span>
             </div>
             <div className="flex flex-col items-end">
-              <span className="text-xs text-slate-500 uppercase">Energy</span>
-              <span className="text-cyan-400 font-bold">{gameState.energy}u</span>
+              <span className="text-xs text-slate-500 uppercase tracking-wider">Energy</span>
+              <span className={`font-bold text-2xl ${gameState.energy < 30 ? 'text-red-400' : 'text-cyan-400'}`}>
+                {gameState.energy}
+              </span>
+              <span className="text-xs text-slate-500">units</span>
             </div>
           </div>
         </div>
@@ -328,25 +439,68 @@ const Dashboard = () => {
               <p className="text-slate-400">Active: {activeUnits.length} / {gameState.units.length}</p>
               {Object.values(UNIT_ROLES).map(role => {
                 const count = gameState.units.filter(u => u.role === role).length;
+                const activeCount = gameState.units.filter(u => u.role === role && u.active).length;
                 return count > 0 ? (
                   <p key={role} className="text-cyan-100">
-                    {role.toUpperCase()}: {count}
+                    {role.toUpperCase()}: {activeCount}/{count}
                   </p>
                 ) : null;
               })}
             </div>
           </div>
 
+          {/* Pod Thermal Rotation */}
+          {gameState.pods && (
+            <div className="border border-cyan-900/30 rounded p-4 bg-slate-900/30">
+              <h2 className="text-sm font-bold opacity-70 mb-3 uppercase text-cyan-400 border-b border-cyan-900 pb-2">
+                Pod Status
+              </h2>
+              <div className="text-xs space-y-2">
+                {Object.entries(gameState.pods).map(([podName, pod]) => {
+                  const podUnits = gameState.units.filter(u => u.pod === podName);
+                  return podUnits.length > 0 ? (
+                    <div key={podName} className={`p-2 rounded ${pod.active ? 'bg-cyan-900/30' : 'bg-slate-800/30'}`}>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="font-bold text-cyan-300">{podName.toUpperCase()}</span>
+                        <span className={pod.active ? 'text-green-400' : 'text-slate-500'}>
+                          {pod.active ? '●' : '○'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Units: {podUnits.length}</span>
+                        <span className={pod.heat > 8 ? 'text-amber-400' : 'text-cyan-400'}>
+                          Heat: {pod.heat}
+                        </span>
+                      </div>
+                      {pod.active && pod.cyclesActive > 3 && (
+                        <div className="text-xs text-amber-500 mt-1">⚠ Thermal stress</div>
+                      )}
+                    </div>
+                  ) : null;
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Hive Core */}
-          <div className="border border-cyan-900/30 rounded p-4 bg-slate-900/30">
-            <h2 className="text-sm font-bold opacity-70 mb-3 uppercase text-cyan-400 border-b border-cyan-900 pb-2">
-              Hive Core
+          <div className="border border-amber-900/50 rounded p-4 bg-slate-900/50">
+            <h2 className="text-sm font-bold opacity-70 mb-3 uppercase text-amber-400 border-b border-amber-900 pb-2">
+              🧬 Hive Core
             </h2>
             <div className="text-xs space-y-1">
               <p>Health: {gameState.hiveCore.health}%</p>
               <p>Capacity: {gameState.hiveCore.capacity}u</p>
+              <p>Stored: {gameState.hiveCore.biomassStored || 0}u</p>
               <p>Digestion: {gameState.hiveCore.digestionRate}u/cycle</p>
+              <p className={gameState.hiveCore.heat > 10 ? 'text-amber-400' : ''}>
+                Core Heat: {gameState.hiveCore.heat}
+              </p>
             </div>
+            {gameState.phase === 'biological' && (
+              <div className="mt-2 pt-2 border-t border-amber-900/50 text-xs text-amber-300 italic">
+                "We are the terrain now"
+              </div>
+            )}
           </div>
 
           {/* Territory */}
@@ -392,6 +546,12 @@ const Dashboard = () => {
                 Advance Cycle
               </button>
               <button
+                onClick={() => setShowBuildPanel(!showBuildPanel)}
+                className="w-full bg-green-900 hover:bg-green-800 text-green-100 px-3 py-2 rounded text-xs font-bold uppercase transition-colors"
+              >
+                Build Units
+              </button>
+              <button
                 onClick={() => setShowPolicyPanel(!showPolicyPanel)}
                 className="w-full bg-slate-800 hover:bg-slate-700 text-cyan-100 px-3 py-2 rounded text-xs font-bold uppercase transition-colors"
               >
@@ -405,6 +565,71 @@ const Dashboard = () => {
               </button>
             </div>
           </div>
+
+          {/* Build Panel */}
+          {showBuildPanel && (
+            <div className="border border-green-900/50 rounded p-4 bg-slate-900/50">
+              <h2 className="text-sm font-bold opacity-70 mb-3 uppercase text-green-400 border-b border-green-900 pb-2">
+                Unit Construction
+              </h2>
+              <div className="text-xs space-y-3">
+                <div className="space-y-2">
+                  <div className="text-slate-400 mb-1 font-bold">SENSOR UNITS</div>
+                  <button
+                    onClick={() => buildUnit(UNIT_ROLES.SENSOR, 'mechanical')}
+                    className="w-full bg-slate-800 hover:bg-slate-700 border border-cyan-700 text-cyan-100 p-2 rounded text-xs transition-colors text-left"
+                  >
+                    <div className="font-bold">Mechanical Sensor</div>
+                    <div className="text-slate-400">Cost: 20 biomass | Heat: 2</div>
+                  </button>
+                  {gameState.unlocked.hybridUnits && (
+                    <button
+                      onClick={() => buildUnit(UNIT_ROLES.SENSOR, 'hybrid')}
+                      className="w-full bg-slate-800 hover:bg-slate-700 border border-purple-700 text-purple-100 p-2 rounded text-xs transition-colors text-left"
+                    >
+                      <div className="font-bold">Hybrid Sensor</div>
+                      <div className="text-slate-400">Cost: 50 biomass | Heat: 1.5</div>
+                    </button>
+                  )}
+                  {gameState.unlocked.biologicalUnits && (
+                    <button
+                      onClick={() => buildUnit(UNIT_ROLES.SENSOR, 'biological')}
+                      className="w-full bg-slate-800 hover:bg-slate-700 border border-green-700 text-green-100 p-2 rounded text-xs transition-colors text-left"
+                    >
+                      <div className="font-bold">Biological Sensor</div>
+                      <div className="text-slate-400">Cost: 80 biomass | Heat: 1</div>
+                    </button>
+                  )}
+                </div>
+
+                {gameState.unlocked.defenderUnits && (
+                  <div className="space-y-2">
+                    <div className="text-slate-400 mb-1 font-bold">DEFENDER UNITS</div>
+                    <button
+                      onClick={() => buildUnit(UNIT_ROLES.DEFENDER, 'mechanical')}
+                      className="w-full bg-slate-800 hover:bg-slate-700 border border-red-700 text-red-100 p-2 rounded text-xs transition-colors text-left"
+                    >
+                      <div className="font-bold">Mechanical Defender</div>
+                      <div className="text-slate-400">Cost: 30 biomass | Heat: 3</div>
+                    </button>
+                  </div>
+                )}
+
+                {gameState.unlocked.workerUnits && (
+                  <div className="space-y-2">
+                    <div className="text-slate-400 mb-1 font-bold">WORKER UNITS</div>
+                    <button
+                      onClick={() => buildUnit(UNIT_ROLES.WORKER, 'mechanical')}
+                      className="w-full bg-slate-800 hover:bg-slate-700 border border-amber-700 text-amber-100 p-2 rounded text-xs transition-colors text-left"
+                    >
+                      <div className="font-bold">Mechanical Worker</div>
+                      <div className="text-slate-400">Cost: 25 biomass | Heat: 2</div>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Policies Panel */}
           {showPolicyPanel && (
@@ -434,6 +659,17 @@ const Dashboard = () => {
                     <option value="low">Low</option>
                     <option value="standard">Standard</option>
                     <option value="high">High</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-slate-400 block mb-1">Pod Rotation:</label>
+                  <select 
+                    value={gameState.policies.podRotation}
+                    onChange={(e) => setGameState(updatePolicy(gameState, 'podRotation', e.target.value))}
+                    className="w-full bg-slate-800 border border-cyan-700 rounded p-1 text-cyan-100"
+                  >
+                    <option value="automatic">Automatic</option>
+                    <option value="manual">Manual</option>
                   </select>
                 </div>
               </div>
@@ -490,8 +726,10 @@ const Dashboard = () => {
                 Execute
               </button>
             </div>
-            <p className="text-xs text-slate-500 mt-2">
-              Try: "scout the perimeter" | "reduce thermal load" | "status report" | "what should we do next?"
+            <p className="text-xs text-slate-500 mt-3 leading-relaxed">
+              <span className="text-slate-400 font-bold">Try:</span> "scout the perimeter" | "reduce thermal load" | "analyze biology" | "what are we?" | "status report"
+              <br/>
+              <span className="text-slate-600 italic mt-1 block">You are not a hero. You are an intelligence making decisions.</span>
             </p>
           </div>
         </section>

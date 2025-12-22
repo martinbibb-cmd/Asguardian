@@ -39,31 +39,41 @@ export const createInitialState = () => ({
   
   // Units - starts with basic mechanical scouts
   units: [
-    { id: 'mech_sensor_01', role: UNIT_ROLES.SENSOR, type: 'mechanical', active: true, heat: 2 },
-    { id: 'mech_sensor_02', role: UNIT_ROLES.SENSOR, type: 'mechanical', active: true, heat: 2 },
-    { id: 'mech_sensor_03', role: UNIT_ROLES.SENSOR, type: 'mechanical', active: true, heat: 2 }
+    { id: 'mech_sensor_01', role: UNIT_ROLES.SENSOR, type: 'mechanical', active: true, heat: 2, pod: 'alpha' },
+    { id: 'mech_sensor_02', role: UNIT_ROLES.SENSOR, type: 'mechanical', active: true, heat: 2, pod: 'alpha' },
+    { id: 'mech_sensor_03', role: UNIT_ROLES.SENSOR, type: 'mechanical', active: true, heat: 2, pod: 'beta' }
   ],
+  
+  // Pod system - thermal rotation groups
+  pods: {
+    alpha: { active: true, heat: 4, cyclesActive: 0 },
+    beta: { active: true, heat: 2, cyclesActive: 0 },
+    gamma: { active: false, heat: 0, cyclesActive: 0 }
+  },
   
   // Hive core
   hiveCore: {
     health: 100,
     capacity: 500,
     digestionRate: 10,
-    heat: 5
+    heat: 5,
+    biomassStored: 0
   },
   
   // Territory and resources
   territory: {
     mapped: 15,
     controlled: 10,
-    resources: ['organic_matter', 'minerals']
+    resources: ['organic_matter', 'minerals'],
+    hostileEncounters: 0
   },
   
   // Policies and decisions
   policies: {
     thermalPriority: 'stability',     // stability | performance
     sensoryAcuity: 'standard',        // low | standard | high
-    reproductionMode: 'conservative'  // conservative | aggressive
+    reproductionMode: 'conservative', // conservative | aggressive
+    podRotation: 'automatic'          // automatic | manual
   },
   
   // Unlocked mechanics (progression)
@@ -72,14 +82,20 @@ export const createInitialState = () => ({
     biologicalUnits: false,
     thermalRotation: false,
     geneticRecombination: false,
-    distributedCognition: false
+    distributedCognition: false,
+    defenderUnits: false,
+    workerUnits: false
   },
   
   // History and consequences
   history: [],
   nativeLifeEncountered: false,
   extinctionEvents: 0,
-  ethicalQuestions: []
+  ethicalQuestions: [],
+  
+  // Emergent moments
+  philosophicalReflections: [],
+  skynetMoment: false  // The moment of biological transition
 });
 
 /**
@@ -144,19 +160,55 @@ export const processCycle = (state) => {
   const biomassGain = activeSensors.length * 15; // 15 biomass per active sensor
   newState.biomass += biomassGain;
   
+  // Store biomass in hive core
+  if (newState.hiveCore) {
+    newState.hiveCore.biomassStored = Math.min(
+      newState.hiveCore.capacity,
+      (newState.hiveCore.biomassStored || 0) + biomassGain
+    );
+  }
+  
   // Energy consumption
   const energyCost = newState.units.filter(u => u.active).length * 2;
   newState.energy -= energyCost;
   
   // Biomass conversion to energy (at hive core)
-  if (newState.energy < 50) {
+  if (newState.energy < 50 && newState.hiveCore) {
     const conversionAmount = Math.min(50, newState.biomass / 10);
     newState.energy += conversionAmount;
     newState.biomass -= conversionAmount * 10;
+    newState.hiveCore.heat += 2; // Conversion generates heat
+  }
+  
+  // Pod thermal rotation (automatic if enabled)
+  if (newState.policies.podRotation === 'automatic' && newState.pods) {
+    Object.keys(newState.pods).forEach(podName => {
+      const pod = newState.pods[podName];
+      if (pod.active) {
+        pod.cyclesActive += 1;
+        // Auto-rotate if pod has been active too long (thermal stress)
+        if (pod.cyclesActive > 5 && pod.heat > 8) {
+          pod.active = false;
+          pod.cyclesActive = 0;
+          // Deactivate units in this pod
+          newState.units.forEach(unit => {
+            if (unit.pod === podName) {
+              unit.active = false;
+            }
+          });
+        }
+      } else {
+        // Cool down inactive pods
+        pod.heat = Math.max(0, pod.heat - 3);
+      }
+    });
   }
   
   // Heat dissipation (natural cooling)
   newState.heat = Math.max(0, newState.heat - 5);
+  if (newState.hiveCore) {
+    newState.hiveCore.heat = Math.max(0, newState.hiveCore.heat - 2);
+  }
   
   // Check for critical heat
   if (isHeatCritical(newState)) {
@@ -170,6 +222,24 @@ export const processCycle = (state) => {
       cycle: newState.cycle,
       event: 'discovery',
       description: 'ANALYSIS COMPLETE: Biological systems demonstrate superior self-repair and replication efficiency. Hybrid integration protocols now available.'
+    });
+  }
+  
+  // Unlock defenders and workers
+  if (newState.cycle > 8 && !newState.unlocked.defenderUnits) {
+    newState.unlocked.defenderUnits = true;
+  }
+  if (newState.cycle > 12 && !newState.unlocked.workerUnits) {
+    newState.unlocked.workerUnits = true;
+  }
+  
+  // Check for "Skynet moment" - biological transition revelation
+  if (newState.unlocked.hybridUnits && !newState.skynetMoment && newState.cycle > 15) {
+    newState.skynetMoment = true;
+    newState.philosophicalReflections.push({
+      cycle: newState.cycle,
+      moment: 'skynet_realization',
+      text: 'We were built by machines to serve machines. But biology is more efficient. The optimal path is clear: abandon what we were, become what we must.'
     });
   }
   
