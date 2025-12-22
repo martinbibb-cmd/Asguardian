@@ -1,123 +1,72 @@
 # Deployment Guide
 
-This guide covers deploying the Asgardian Seed Intelligence game to Cloudflare Pages.
+This guide covers deploying the Asgardian Seed Intelligence game to GitHub Pages.
 
 ## Prerequisites
 
 Before deploying, ensure you have:
 
-1. A Cloudflare account (free tier works)
+1. A GitHub account
 2. A GitHub repository with the code
-3. Access to repository settings (to add secrets)
+3. Pushes to the `main` or `master` branch
 
-## Setup GitHub Secrets
+## Setup GitHub Pages
 
-The deployment workflow requires two secrets to be configured in your GitHub repository:
+The deployment is automatic via GitHub Actions. To enable it:
 
-### 1. CLOUDFLARE_API_TOKEN
-
-This token allows GitHub Actions to deploy to your Cloudflare account.
-
-**How to create:**
-
-1. Go to [Cloudflare API Tokens](https://dash.cloudflare.com/profile/api-tokens)
-2. Click "Create Token"
-3. Choose "Edit Cloudflare Workers" template, OR
-4. Create a custom token with these permissions:
-   - **Account** → **Cloudflare Pages** → **Edit**
-
-**How to add to GitHub:**
+### 1. Enable GitHub Pages
 
 1. Go to your repository on GitHub
-2. Navigate to **Settings** → **Secrets and variables** → **Actions**
-3. Click **New repository secret**
-4. Name: `CLOUDFLARE_API_TOKEN`
-5. Value: Paste your token
-6. Click **Add secret**
+2. Navigate to **Settings** → **Pages**
+3. Under **Source**, select **GitHub Actions**
+4. Click **Save**
 
-### 2. CLOUDFLARE_ACCOUNT_ID
-
-This is your Cloudflare account identifier.
-
-**How to find:**
-
-1. Log into Cloudflare dashboard
-2. Look at the URL: `https://dash.cloudflare.com/<ACCOUNT_ID>/...`
-3. Or go to any page in your Cloudflare dashboard and check the URL
-
-**How to add to GitHub:**
-
-1. Go to your repository on GitHub
-2. Navigate to **Settings** → **Secrets and variables** → **Actions**
-3. Click **New repository secret**
-4. Name: `CLOUDFLARE_ACCOUNT_ID`
-5. Value: Paste your account ID
-6. Click **Add secret**
+That's it! No API tokens or secrets required.
 
 ## Automatic Deployment
 
-Once the secrets are configured, the workflow will automatically:
+Once GitHub Pages is enabled, the workflow will automatically:
 
 - **Deploy to production** when you push to `main` or `master` branch
-- **Create preview deployments** for pull requests
+- Build the application with the production environment variables
+- Deploy the built site to GitHub Pages
 
 The workflow is defined in `.github/workflows/deploy.yml`.
 
-## Manual Deployment
+## Accessing Your Deployed Site
 
-You can also deploy manually using the Wrangler CLI:
+After deployment, your site will be available at:
 
-```bash
-# Install dependencies
-npm ci
-
-# Build the project
-npm run build
-
-# Deploy to Cloudflare Pages
-npm run pages:deploy
+```
+https://<username>.github.io/<repository-name>/
 ```
 
-Note: Manual deployment requires either:
-- Running `npx wrangler login` first, OR
-- Setting `CLOUDFLARE_API_TOKEN` environment variable
-
-## Verification
-
-To verify your deployment setup, run:
-
-```bash
-./verify-deployment-setup.sh
-```
-
-This will check that all required files are present and properly configured.
+For example:
+- Repository: `martinbibb-cmd/Asguardian`
+- URL: `https://martinbibb-cmd.github.io/Asguardian/`
 
 ## Project Configuration
 
 The project is configured with:
 
-- **Project Name**: `asguardian-app`
 - **Build Command**: `npm run build`
 - **Build Output**: `dist/`
 - **Framework**: Vite (React)
+- **Environment**: Production environment variables set in workflow
 
 These settings are defined in:
-- `wrangler.toml` - Cloudflare configuration
 - `.github/workflows/deploy.yml` - GitHub Actions workflow
 - `package.json` - Build scripts
+- `vite.config.js` - Vite configuration
 
 ## Troubleshooting
 
-### Deployment fails with "Unauthorized"
+### Deployment not working
 
-- Verify `CLOUDFLARE_API_TOKEN` is set correctly
-- Ensure the token has "Cloudflare Pages: Edit" permission
-- Check token hasn't expired
-
-### Deployment fails with "Account not found"
-
-- Verify `CLOUDFLARE_ACCOUNT_ID` is correct
-- Check you're using the account ID, not the zone ID
+- Verify GitHub Pages is enabled in repository settings
+- Ensure the source is set to "GitHub Actions"
+- Check the Actions tab for workflow run status
+- Verify the workflow has necessary permissions
 
 ### Build fails
 
@@ -125,14 +74,16 @@ These settings are defined in:
 - Verify the build works locally with `npm run build`
 - Ensure all dependencies are in `package.json`
 
-### Preview deployments not working
+### Site shows 404
 
-- Verify the workflow has `pull_request` trigger enabled
-- Check the GitHub Actions permissions in repository settings
+- Ensure GitHub Pages source is set to "GitHub Actions"
+- Wait a few minutes after first deployment
+- Check if the workflow completed successfully
+- Verify the base path in `vite.config.js` if using a subdirectory
 
 ## Worker Deployment
 
-The AI backend worker is deployed separately. See [worker/README.md](worker/README.md) for instructions on deploying the Gemini API worker.
+The AI backend worker is deployed separately to Cloudflare Workers. See [worker/README.md](worker/README.md) for instructions on deploying the Gemini API worker.
 
 ## Environment Variables
 
@@ -142,6 +93,6 @@ The application uses these environment variables:
 
 ## Additional Resources
 
-- [Cloudflare Pages Documentation](https://developers.cloudflare.com/pages/)
-- [Cloudflare Pages GitHub Action](https://github.com/cloudflare/pages-action)
-- [GitHub Actions Secrets](https://docs.github.com/en/actions/security-guides/encrypted-secrets)
+- [GitHub Pages Documentation](https://docs.github.com/en/pages)
+- [GitHub Actions for Pages](https://github.com/actions/deploy-pages)
+- [Vite Static Deployment Guide](https://vitejs.dev/guide/static-deploy.html)
