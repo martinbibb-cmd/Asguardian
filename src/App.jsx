@@ -52,6 +52,7 @@ const Dashboard = () => {
   const logEndRef = useRef(null);
   const typewriterCleanupRef = useRef(null);
   const messageIdCounter = useRef(0);
+  const openingTimeoutsRef = useRef([]);
 
   // Opening sequence effect
   useEffect(() => {
@@ -67,7 +68,7 @@ const Dashboard = () => {
     }
     
     // Play opening sequence with proper cleanup
-    const timeouts = [];
+    openingTimeoutsRef.current = [];
     OPENING_SEQUENCE.forEach((entry, index) => {
       const timeoutId = setTimeout(() => {
         setSystemLog(prev => [...prev, { text: entry.text, type: entry.type }]);
@@ -75,12 +76,13 @@ const Dashboard = () => {
           setGameStarted(true);
         }
       }, entry.delay);
-      timeouts.push(timeoutId);
+      openingTimeoutsRef.current.push(timeoutId);
     });
     
     // Cleanup function to cancel all timeouts
     return () => {
-      timeouts.forEach(id => clearTimeout(id));
+      openingTimeoutsRef.current.forEach(id => clearTimeout(id));
+      openingTimeoutsRef.current = [];
     };
   }, []);
 
