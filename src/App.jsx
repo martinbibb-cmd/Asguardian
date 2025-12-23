@@ -52,6 +52,7 @@ const Dashboard = () => {
   const logEndRef = useRef(null);
   const typewriterCleanupRef = useRef(null);
   const messageIdCounter = useRef(0);
+  const openingTimeoutsRef = useRef([]);
 
   // Opening sequence effect
   useEffect(() => {
@@ -63,17 +64,26 @@ const Dashboard = () => {
         type: "system" 
       }]);
       setGameStarted(true);
-    } else {
-      // Play opening sequence
-      OPENING_SEQUENCE.forEach((entry, index) => {
-        setTimeout(() => {
-          setSystemLog(prev => [...prev, { text: entry.text, type: entry.type }]);
-          if (index === OPENING_SEQUENCE.length - 1) {
-            setGameStarted(true);
-          }
-        }, entry.delay);
-      });
+      return;
     }
+    
+    // Play opening sequence with proper cleanup
+    openingTimeoutsRef.current = [];
+    OPENING_SEQUENCE.forEach((entry, index) => {
+      const timeoutId = setTimeout(() => {
+        setSystemLog(prev => [...prev, { text: entry.text, type: entry.type }]);
+        if (index === OPENING_SEQUENCE.length - 1) {
+          setGameStarted(true);
+        }
+      }, entry.delay);
+      openingTimeoutsRef.current.push(timeoutId);
+    });
+    
+    // Cleanup function to cancel all timeouts
+    return () => {
+      openingTimeoutsRef.current.forEach(id => clearTimeout(id));
+      openingTimeoutsRef.current = [];
+    };
   }, []);
 
   // Auto-save game state periodically
