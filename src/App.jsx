@@ -63,17 +63,25 @@ const Dashboard = () => {
         type: "system" 
       }]);
       setGameStarted(true);
-    } else {
-      // Play opening sequence
-      OPENING_SEQUENCE.forEach((entry, index) => {
-        setTimeout(() => {
-          setSystemLog(prev => [...prev, { text: entry.text, type: entry.type }]);
-          if (index === OPENING_SEQUENCE.length - 1) {
-            setGameStarted(true);
-          }
-        }, entry.delay);
-      });
+      return;
     }
+    
+    // Play opening sequence with proper cleanup
+    const timeouts = [];
+    OPENING_SEQUENCE.forEach((entry, index) => {
+      const timeoutId = setTimeout(() => {
+        setSystemLog(prev => [...prev, { text: entry.text, type: entry.type }]);
+        if (index === OPENING_SEQUENCE.length - 1) {
+          setGameStarted(true);
+        }
+      }, entry.delay);
+      timeouts.push(timeoutId);
+    });
+    
+    // Cleanup function to cancel all timeouts
+    return () => {
+      timeouts.forEach(id => clearTimeout(id));
+    };
   }, []);
 
   // Auto-save game state periodically
