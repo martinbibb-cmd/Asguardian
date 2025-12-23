@@ -1,1 +1,252 @@
 @import "tailwindcss";
+
+/* SEED / HIVE / ASCENSION - Custom Styles */
+/* "Terraforming is just genocide with better PR" */
+
+/* Base styling */
+body {
+  @apply bg-slate-950 text-cyan-100;
+  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+}
+
+/* Custom scrollbar for terminal feel */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-slate-900;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-cyan-900 rounded;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-cyan-700;
+}
+
+/* Glowing text effects */
+.glow-cyan {
+  text-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
+}
+
+.glow-amber {
+  text-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+}
+
+.glow-red {
+  text-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+}
+
+.glow-purple {
+  text-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
+}
+
+/* Pulse animation for critical states */
+@keyframes pulse-critical {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse-critical {
+  animation: pulse-critical 0.5s ease-in-out infinite;
+}
+
+/* Scan line effect for terminal */
+@keyframes scanline {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100vh);
+  }
+}
+
+.scanline::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(to bottom, transparent, rgba(34, 211, 238, 0.1), transparent);
+  animation: scanline 8s linear infinite;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Terminal cursor blink */
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.cursor-blink::after {
+  content: '█';
+  animation: blink 1s step-end infinite;
+  @apply text-cyan-400;
+}
+
+/* Typewriter text reveal */
+@keyframes typewriter {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+.typewriter {
+  overflow: hidden;
+  white-space: nowrap;
+  animation: typewriter 0.5s steps(40, end);
+}
+
+/* Heat indicator gradient */
+.heat-gradient {
+  background: linear-gradient(90deg, 
+    rgba(34, 211, 238, 0.8) 0%,
+    rgba(251, 191, 36, 0.8) 60%,
+    rgba(239, 68, 68, 0.8) 100%
+  );
+}
+
+/* Phase-specific backgrounds */
+.phase-mechanical {
+  @apply bg-slate-900;
+  border-color: rgba(34, 211, 238, 0.3);
+}
+
+.phase-hybrid {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(59, 7, 100, 0.3));
+  border-color: rgba(168, 85, 247, 0.3);
+}
+
+.phase-biological {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(21, 128, 61, 0.2));
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.phase-ascension {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(168, 85, 247, 0.3));
+  border-color: rgba(168, 85, 247, 0.5);
+}
+
+/* Schematic display styling */
+.schematic {
+  @apply font-mono text-xs leading-tight;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+/* Ethical dilemma overlay effect */
+.dilemma-overlay {
+  background: radial-gradient(ellipse at center, rgba(15, 23, 42, 0.95) 0%, rgba(0, 0, 0, 0.98) 100%);
+}
+
+/* Resource bar styling */
+.resource-bar {
+  @apply h-1 rounded-full transition-all duration-300;
+  background: linear-gradient(90deg, var(--bar-color) var(--bar-width), rgba(30, 41, 59, 0.5) var(--bar-width));
+}
+
+/* Pod status indicators */
+.pod-active {
+  @apply bg-cyan-900/30 border-l-2 border-cyan-500;
+}
+
+.pod-standby {
+  @apply bg-amber-900/20 border-l-2 border-amber-600;
+}
+
+.pod-hibernating {
+  @apply bg-slate-800/50 border-l-2 border-slate-600;
+}
+
+.pod-damaged {
+  @apply bg-red-900/30 border-l-2 border-red-500;
+}
+
+/* Button hover effects */
+.btn-action {
+  @apply transition-all duration-200;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-action::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(34, 211, 238, 0.1), transparent);
+  transition: left 0.3s ease;
+}
+
+.btn-action:hover::before {
+  left: 100%;
+}
+
+/* Evolution indicator */
+.evolution-glow {
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+}
+
+/* Native life warning */
+.native-warning {
+  @apply border-l-4 border-amber-500 bg-amber-900/10 pl-3;
+}
+
+/* Extinction marker */
+.extinction-marker {
+  @apply border-l-4 border-red-600 bg-red-900/10 pl-3;
+}
+
+/* Restraint marker */
+.restraint-marker {
+  @apply border-l-4 border-green-500 bg-green-900/10 pl-3;
+}
+
+/* Log entry styling */
+.log-entry {
+  @apply py-1 border-b border-slate-800/30;
+}
+
+.log-entry:last-child {
+  border-bottom: none;
+}
+
+/* Selection styling */
+::selection {
+  @apply bg-cyan-700 text-cyan-100;
+}
+
+/* Focus styling */
+input:focus, select:focus, button:focus {
+  @apply outline-none ring-1 ring-cyan-500;
+}
+
+/* Disabled state */
+.disabled {
+  @apply opacity-50 cursor-not-allowed;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .schematic {
+    @apply text-[8px];
+  }
+}
