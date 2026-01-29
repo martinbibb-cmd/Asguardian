@@ -1,9 +1,9 @@
 /**
  * API Service for communicating with the Gemini AI Worker
- * Worker endpoint: https://ai-agent.martinbibb.workers.dev
+ * Worker endpoint: https://asguard.martinbibb.workers.dev
  */
 
-const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT || 'https://ai-agent.martinbibb.workers.dev';
+const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT || 'https://asguard.martinbibb.workers.dev';
 
 /**
  * Send a command to the Gemini AI worker
@@ -13,6 +13,7 @@ const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT || 'https://ai-agent.mart
  */
 export const sendCommand = async (message, context = {}) => {
   try {
+    console.log(`[API] Sending command to: ${API_ENDPOINT}`);
     const response = await fetch(API_ENDPOINT, {
       method: 'POST',
       headers: {
@@ -25,13 +26,17 @@ export const sendCommand = async (message, context = {}) => {
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[API] HTTP error! status: ${response.status}, body: ${errorText}`);
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('API Error:', error);
+    console.error('[API] Request failed:', error.message);
+    console.error('[API] Endpoint:', API_ENDPOINT);
+    console.error('[API] Full error:', error);
     throw error;
   }
 };
@@ -42,12 +47,17 @@ export const sendCommand = async (message, context = {}) => {
  */
 export const healthCheck = async () => {
   try {
+    console.log(`[API] Health check to: ${API_ENDPOINT}`);
     const response = await fetch(API_ENDPOINT, {
       method: 'GET',
     });
-    return response.ok;
+    const isHealthy = response.ok;
+    console.log(`[API] Health check result: ${isHealthy ? 'ONLINE' : 'OFFLINE'} (status: ${response.status})`);
+    return isHealthy;
   } catch (error) {
-    console.error('Health check failed:', error);
+    console.error('[API] Health check failed:', error.message);
+    console.error('[API] Endpoint:', API_ENDPOINT);
+    console.error('[API] Full error:', error);
     return false;
   }
 };
