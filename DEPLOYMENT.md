@@ -81,6 +81,35 @@ These settings are defined in:
 - Check if the workflow completed successfully
 - Verify the base path in `vite.config.js` if using a subdirectory
 
+## Cloudflare Pages Deployment
+
+To deploy the application to Cloudflare Pages:
+
+### Configuration
+
+In your Cloudflare Pages dashboard, configure the following settings:
+
+- **Build Command**: `npm run build`
+- **Build Output Directory**: `dist`
+- **Deploy Command**: Leave empty (Cloudflare Pages will automatically deploy the build output)
+
+**Important**: Do NOT set the deploy command to `wrangler deploy` as this is for Cloudflare Workers, not Pages. Cloudflare Pages automatically handles deployment after the build is complete.
+
+### Manual Deployment
+
+To manually deploy to Cloudflare Pages using the CLI:
+
+```bash
+npm run pages:deploy
+```
+
+Or directly:
+
+```bash
+npm run build
+npx wrangler pages deploy dist
+```
+
 ## Worker Deployment
 
 The AI backend worker is deployed separately to Cloudflare Workers. See [worker/README.md](worker/README.md) for instructions on deploying the Gemini API worker.

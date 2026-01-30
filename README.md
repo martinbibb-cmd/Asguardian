@@ -76,7 +76,8 @@ This is not a game about being a hero. It's a game about:
 ## Documentation
 
 - [Full Game Design Document](./GAME_DESIGN.md)
-- [Deployment Guide](./DEPLOYMENT.md)
+- [GitHub Pages Deployment Guide](./DEPLOYMENT.md)
+- [Cloudflare Pages Deployment Guide](./CLOUDFLARE_PAGES.md)
 - [API Integration Guide](./worker/README.md)
 
 ## Technical Stack
