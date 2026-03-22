@@ -1,0 +1,36 @@
+.advice-panel {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+}
+
+.advice-panel--empty {
+  color: #6b7280;
+  font-style: italic;
+}
+
+.advice-panel__title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #111827;
+}
+
+.advice-panel__summary {
+  font-size: 0.875rem;
+  color: #374151;
+  margin-bottom: 0.75rem;
+}
+
+.advice-panel__list {
+  list-style: disc;
+  padding-left: 1.25rem;
+  margin: 0;
+}
+
+.advice-panel__item {
+  font-size: 0.875rem;
+  color: #374151;
+  margin-bottom: 0.25rem;
+}
