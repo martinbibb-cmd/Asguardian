@@ -1,5 +1,5 @@
 /**
- * API Service for communicating with the Gemini AI Worker.
+ * API Service for communicating with the OpenAI endpoint.
  *
  * Static hosts can render ASGUARDIAN without a server-side runtime. If the
  * configured worker is unreachable, directives fall back to deterministic local
@@ -7,7 +7,7 @@
  * network error to the player.
  */
 
-const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT || 'https://asguard.martinbibb.workers.dev';
+const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT || '/api';
 const USE_LOCAL_DIRECTIVES = import.meta.env.VITE_USE_LOCAL_DIRECTIVES === 'true';
 
 const commandIncludes = (message, terms) => terms.some(term => message.toLowerCase().includes(term));
@@ -52,7 +52,7 @@ const buildLocalResponse = (message, context = {}, reason = 'remote uplink unava
 };
 
 /**
- * Send a command to the Gemini AI worker.
+ * Send a command to the OpenAI endpoint.
  * @param {string} message - The user's command/message
  * @param {Object} context - Game context (heat, biomass, units)
  * @returns {Promise<Object>} Response from the AI or local fallback cognition

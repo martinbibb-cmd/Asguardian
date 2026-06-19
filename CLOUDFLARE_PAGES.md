@@ -51,9 +51,14 @@ npx wrangler pages deploy dist --project-name asguardian-app
 
 This repository is configured for:
 - **Frontend**: Cloudflare Pages (this application)
-- **Backend**: Cloudflare Workers (AI API in `/worker` directory)
+- **Backend**: Cloudflare Pages Function at `/api` (reuses `/worker/index.js`) or optional standalone Cloudflare Worker
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for GitHub Pages deployment and [worker/README.md](worker/README.md) for Cloudflare Workers deployment.
+
+
+### OpenAI API secret
+
+In Cloudflare Pages → Settings → Environment variables, add an encrypted production secret named `OPENAI_API_KEY`. The frontend calls `/api` by default, and that Pages Function reads the secret server-side. Do not expose the key as a `VITE_` variable.
 
 ## Troubleshooting
 
@@ -77,10 +82,11 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for GitHub Pages deployment and [worker/READM
 ### Need to deploy both frontend and backend?
 
 - **Frontend** (this app): Deploy to Cloudflare Pages (automatic on push)
-- **Backend** (API worker): Deploy separately using `./deploy-worker.sh`
+- **Backend**: Add the `OPENAI_API_KEY` secret to Cloudflare Pages variables and secrets. The bundled `/api` Pages Function deploys with the frontend. Deploy the standalone worker only if you set `VITE_API_ENDPOINT` to that worker URL.
 
 ## Configuration Files
 
 - `wrangler.toml` - Cloudflare Pages configuration (frontend)
-- `worker/wrangler.toml` - Cloudflare Workers configuration (backend)
+- `functions/api.js` - Cloudflare Pages Function route for frontend API calls
+- `worker/wrangler.toml` - Optional standalone Cloudflare Workers configuration (backend)
 - `package.json` - Contains `pages:deploy` script for manual deployments

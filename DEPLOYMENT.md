@@ -112,13 +112,13 @@ npx wrangler pages deploy dist
 
 ## Worker Deployment
 
-The AI backend worker is deployed separately to Cloudflare Workers. See [worker/README.md](worker/README.md) for instructions on deploying the Gemini API worker.
+The AI backend worker is deployed separately to Cloudflare Workers. See [worker/README.md](worker/README.md) for instructions on deploying the OpenAI API worker.
 
 ## Environment Variables
 
 The application uses these environment variables:
 
-- `VITE_API_ENDPOINT` - URL of the Gemini API worker (set in workflow)
+- `VITE_API_ENDPOINT` - URL of the OpenAI API worker (set in workflow)
 
 ## Additional Resources
 

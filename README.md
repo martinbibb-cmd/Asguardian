@@ -28,7 +28,7 @@ But there's a twist: **Biology is better than machinery**. And you're starting t
 
 🌌 **Persistent Meta-Game** - The game remembers. Each completion makes future runs harder.
 
-🤖 **AI-Powered Narrative** - Powered by Gemini AI as the voice of the Seed Intelligence.
+🤖 **AI-Powered Narrative** - Powered by OpenAI as the voice of the Seed Intelligence.
 
 ## Quick Start
 
@@ -45,7 +45,7 @@ npm run dev
 
 ### Environment Setup
 
-Create `.env.development`:
+Cloudflare Pages uses the built-in `/api` function by default. For local development against another deployed worker, create `.env.development`:
 ```
 VITE_API_ENDPOINT=https://asguard.martinbibb.workers.dev
 ```
@@ -85,7 +85,7 @@ This is not a game about being a hero. It's a game about:
 ## Technical Stack
 
 - **Frontend**: React + Vite
-- **AI**: Google Gemini (via Cloudflare Workers)
+- **AI**: OpenAI (via Cloudflare Pages Functions or Cloudflare Workers)
 - **Styling**: Tailwind CSS
 - **Deployment**: Cloudflare Pages (frontend) + Workers (backend)
 - **State**: LocalStorage for persistence
@@ -117,20 +117,20 @@ No API tokens or secrets required!
 
 ## API Integration
 
-This app connects to a Cloudflare Worker that provides Gemini AI capabilities:
+This app connects to the bundled Cloudflare Pages Function at `/api`, which uses the `OPENAI_API_KEY` secret configured in the Pages dashboard. You can still override `VITE_API_ENDPOINT` to point at a separately deployed Worker.
 
-**Worker URL**: `https://asguard.martinbibb.workers.dev`
+**Default API URL**: `/api`
 
 ### Environment Variables
 
-The API endpoint is configured via environment variables:
+The API endpoint defaults to `/api` and can be overridden via Vite environment variables:
 
-- **Development**: Uses `.env.development`
-- **Production**: Uses `.env.production`
+- **Development**: Optional `.env.development`
+- **Production**: Optional `.env.production`
 
 To customize the endpoint:
 ```bash
-# .env.development
+# .env.development (optional)
 VITE_API_ENDPOINT=https://asguard.martinbibb.workers.dev
 ```
 
@@ -162,7 +162,7 @@ The API service is located in `src/services/api.js` and handles all communicatio
 
 ## Worker Deployment
 
-The Gemini API worker code is located in the `/worker` directory.
+The OpenAI API worker code is located in the `/worker` directory.
 
 ### Deploy the Worker (no cd needed!)
 
@@ -170,8 +170,8 @@ The Gemini API worker code is located in the `/worker` directory.
 # 1. Login to Cloudflare
 npx wrangler login
 
-# 2. Add your Gemini API key (get from https://makersuite.google.com/app/apikey)
-npx wrangler secret put GEMINI_API_KEY --config worker/wrangler.toml
+# 2. Add your OpenAI API key (get from https://platform.openai.com/api-keys)
+npx wrangler secret put OPENAI_API_KEY --config worker/wrangler.toml
 
 # 3. Deploy
 ./deploy-worker.sh
@@ -179,7 +179,7 @@ npx wrangler secret put GEMINI_API_KEY --config worker/wrangler.toml
 
 See [worker/README.md](worker/README.md) for detailed instructions.
 
-**Note:** You need a Gemini API key from https://makersuite.google.com/app/apikey
+**Note:** You need an OpenAI API key from https://platform.openai.com/api-keys
 
 ## Development
 
