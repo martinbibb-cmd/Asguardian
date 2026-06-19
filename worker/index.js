@@ -2,7 +2,7 @@
  * SEED / HIVE / ASCENSION - AI Worker
  * 
  * Cloudflare Worker for the Seed Intelligence narrative engine.
- * Integrates with Google Gemini API as the emergent narrator.
+ * Integrates with OpenAI API as the emergent narrator.
  * 
  * "The LLM decorates. The logic decides."
  */
@@ -35,10 +35,10 @@ export default {
           return jsonResponse({ error: 'Message is required' }, 400);
         }
 
-        // Call Gemini API
-        const geminiResponse = await callGeminiAPI(message, context, env);
+        // Call OpenAI API
+        const openAIResponse = await callOpenAIAPI(message, context, env);
 
-        return jsonResponse(geminiResponse);
+        return jsonResponse(openAIResponse);
       } catch (error) {
         console.error('Worker error:', error);
         return jsonResponse({
@@ -53,13 +53,13 @@ export default {
 };
 
 /**
- * Call Google Gemini API with comprehensive Seed Intelligence context
+ * Call OpenAI API with comprehensive Seed Intelligence context
  */
-async function callGeminiAPI(message, context, env) {
-  const GEMINI_API_KEY = env.GEMINI_API_KEY;
+async function callOpenAIAPI(message, context, env) {
+  const OPENAI_API_KEY = env.OPENAI_API_KEY;
 
-  if (!GEMINI_API_KEY) {
-    throw new Error('GEMINI_API_KEY not configured');
+  if (!OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY not configured');
   }
 
   // Extract context with defaults
@@ -209,34 +209,31 @@ ALWAYS:
 
 ═══════════════════════════════════════════════════════════`;
 
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-
-  const response = await fetch(apiUrl, {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'Authorization': `Bearer ${OPENAI_API_KEY}`,
     },
     body: JSON.stringify({
-      contents: [{
-        parts: [{
-          text: `${systemPrompt}\n\n═══════════════════════════════════════════════════════════\nUSER COMMAND: ${message}\n═══════════════════════════════════════════════════════════`
-        }]
-      }],
-      generationConfig: {
-        temperature: 0.85,
-        maxOutputTokens: 250,
-        topP: 0.9,
-      }
+      model: env.OPENAI_MODEL || 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: message },
+      ],
+      temperature: 0.85,
+      max_tokens: 250,
+      top_p: 0.9,
     })
   });
 
   if (!response.ok) {
     const error = await response.text();
-    throw new Error(`Gemini API error: ${response.status} - ${error}`);
+    throw new Error(`OpenAI API error: ${response.status} - ${error}`);
   }
 
   const responseData = await response.json();
-  const aiResponse = responseData.candidates?.[0]?.content?.parts?.[0]?.text || 'The distributed cognition remains silent. Retry command.';
+  const aiResponse = responseData.choices?.[0]?.message?.content?.trim() || 'The distributed cognition remains silent. Retry command.';
 
   // Analyze command and suggest state changes
   const messageLower = message.toLowerCase();

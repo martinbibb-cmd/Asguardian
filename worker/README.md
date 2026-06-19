@@ -1,6 +1,6 @@
-# Asgardian Gemini Worker
+# Asgardian OpenAI Worker
 
-Cloudflare Worker that provides Gemini AI integration for the Asgardian Seed Intelligence game.
+Cloudflare Worker that provides OpenAI integration for the Asgardian Seed Intelligence game.
 
 ## Deployment
 
@@ -10,9 +10,9 @@ Cloudflare Worker that provides Gemini AI integration for the Asgardian Seed Int
 # 1. Login to Cloudflare
 npx wrangler login
 
-# 2. Set your Gemini API key
-npx wrangler secret put GEMINI_API_KEY --config worker/wrangler.toml
-# Get key from: https://makersuite.google.com/app/apikey
+# 2. Set your OpenAI API key
+npx wrangler secret put OPENAI_API_KEY --config worker/wrangler.toml
+# Get key from: https://platform.openai.com/api-keys
 
 # 3. Deploy
 ./deploy-worker.sh
@@ -47,7 +47,7 @@ curl -X POST https://asguard.martinbibb.workers.dev \
 
 ## Environment Variables
 
-- `GEMINI_API_KEY` - Required. Your Google Gemini API key
+- `OPENAI_API_KEY` - Required. Your OpenAI API key
 
 ## API Endpoints
 
@@ -59,7 +59,7 @@ Health check endpoint. Returns worker status.
 ```json
 {
   "status": "online",
-  "service": "Asgardian Gemini Worker",
+  "service": "Asgardian OpenAI Worker",
   "version": "1.0.0"
 }
 ```
