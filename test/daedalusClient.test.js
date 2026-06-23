@@ -43,7 +43,7 @@ test('client does not log the API key', async () => {
   assert.equal(JSON.stringify(logs).includes(env.DAEDALUS_LLM_API_KEY), false);
 });
 
-test('analyseTaskState parses expected JSON', async () => {
+test('analyseTaskState parses expected JSON from successful mocked gateway response', async () => {
   const expected = {
     active_tasks: ['Ship invoice'],
     blocked_tasks: ['Deploy app'],
@@ -53,12 +53,16 @@ test('analyseTaskState parses expected JSON', async () => {
     uncertainties: ['Whether API key has been rotated'],
   };
   const client = {
-    json: async () => ({ ok: true, data: { json: expected } }),
+    isConfigured: () => true,
+    json: async () => ({ ok: true, data: { json: expected }, meta: { gatewayConfigured: true, gatewayReachable: true } }),
   };
 
-  const response = await analyseTaskState('Invoice is active. Deploy waits on DNS.', { client });
+  const response = await analyseTaskState('Invoice is active. Deploy waits on DNS.', { client, devDebug: true });
 
-  assert.deepEqual(response, { ok: true, data: expected });
+  assert.deepEqual(response.data, expected);
+  assert.equal(response.local, false);
+  assert.equal(response.remote, true);
+  assert.deepEqual(response.debug, { gatewayConfigured: true, gatewayReachable: true, failureKind: undefined });
 });
 
 test('gateway failure returns a structured error', async () => {
@@ -71,7 +75,71 @@ test('gateway failure returns a structured error', async () => {
 
   assert.equal(response.ok, false);
   assert.equal(response.error.code, 'DAEDALUS_HTTP_ERROR');
+  assert.equal(response.error.failureKind, 'gateway_error');
   assert.equal(response.error.status, 503);
   assert.equal(response.error.retryable, true);
   assert.equal(response.error.endpoint, '/v1/summarise');
+});
+
+test('unreachable gateway falls back cleanly with development debug status', async () => {
+  const client = createDaedalusClient({
+    env,
+    fetch: async () => { throw new TypeError('Load failed'); },
+  });
+
+  const response = await analyseTaskState('Ship the report.', { client, devDebug: true });
+
+  assert.equal(response.ok, true);
+  assert.equal(response.local, true);
+  assert.equal(response.remote, false);
+  assert.equal(response.error.failureKind, 'network_fetch_failure');
+  assert.deepEqual(response.debug, {
+    gatewayConfigured: true,
+    gatewayReachable: false,
+    failureKind: 'network_fetch_failure',
+  });
+});
+
+test('missing gateway URL falls back cleanly', async () => {
+  const client = createDaedalusClient({
+    env: { ...env, DAEDALUS_LLM_BASE_URL: '' },
+    fetch: async () => { throw new Error('fetch should not be called'); },
+  });
+
+  const response = await analyseTaskState('Check blockers.', { client, devDebug: true });
+
+  assert.equal(response.ok, true);
+  assert.equal(response.local, true);
+  assert.equal(response.error.code, 'DAEDALUS_CONFIG_MISSING');
+  assert.equal(response.debug.gatewayConfigured, false);
+  assert.equal(response.debug.gatewayReachable, false);
+  assert.equal(response.debug.failureKind, 'missing_config');
+});
+
+test('401 auth failure does not expose secret', async () => {
+  const client = createDaedalusClient({
+    env,
+    fetch: async () => Response.json({ error: 'bad key' }, { status: 401 }),
+  });
+
+  const response = await client.json('private prompt');
+  const serialised = JSON.stringify(response);
+
+  assert.equal(response.ok, false);
+  assert.equal(response.error.code, 'DAEDALUS_AUTH_FAILED');
+  assert.equal(response.error.failureKind, 'auth_failure');
+  assert.equal(serialised.includes(env.DAEDALUS_LLM_API_KEY), false);
+});
+
+test('invalid JSON response is reported clearly', async () => {
+  const client = createDaedalusClient({
+    env,
+    fetch: async () => new Response('{not valid json', { headers: { 'content-type': 'application/json' } }),
+  });
+
+  const response = await client.models();
+
+  assert.equal(response.ok, false);
+  assert.equal(response.error.code, 'DAEDALUS_INVALID_JSON');
+  assert.equal(response.error.failureKind, 'invalid_json_response');
 });

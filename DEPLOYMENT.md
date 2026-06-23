@@ -119,9 +119,11 @@ The AI backend worker is deployed separately to Cloudflare Workers. See [worker/
 The application uses these environment variables:
 
 - `VITE_API_ENDPOINT` - URL of the app API worker (set in workflow)
-- `DAEDALUS_LLM_BASE_URL` - Daedalus LLM Gateway base URL, for example `http://100.69.193.95:8787` in Tailscale-enabled development or a future public tunnel such as `https://llm.<domain>`
+- `DAEDALUS_LLM_BASE_URL` - Daedalus LLM Gateway base URL. `http://100.69.193.95:8787` is a Tailscale-only development address and works only from Tailscale-connected machines. Cloudflare Pages/Workers production requires a Cloudflare Tunnel or another public HTTPS route to the gateway; do not hard-code a public URL until that route exists.
 - `DAEDALUS_LLM_MODEL` - Default Daedalus model, for example `llama3.2:3b`
-- `DAEDALUS_LLM_API_KEY` - Secret sent as `x-daedalus-api-key` to the gateway
+- `DAEDALUS_LLM_API_KEY` - Secret sent as `x-daedalus-api-key` to the gateway. Never expose this value in logs, UI, errors, or snapshots.
+
+Asguardian apps must call the Daedalus LLM Gateway and must never call Ollama or port `11434` directly. When the gateway is missing or unreachable, production should fail clearly at the gateway-client layer and keep local fallback cognition active.
 
 ## Additional Resources
 

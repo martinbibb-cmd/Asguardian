@@ -215,6 +215,8 @@ DAEDALUS_LLM_MODEL=llama3.2:3b
 DAEDALUS_LLM_API_KEY=<secret>
 ```
 
-`DAEDALUS_LLM_BASE_URL` is intentionally configurable because Cloudflare Workers cannot reach the Tailscale development IP unless the Worker runs somewhere with Tailscale access. For deploys outside that network, switch it to a reachable HTTPS tunnel hostname such as `https://llm.<domain>`.
+`DAEDALUS_LLM_BASE_URL` is intentionally configurable. The Tailscale IP (`http://100.69.193.95:8787`) works only from Tailscale-connected machines. Cloudflare Pages/Workers production cannot reach that private Tailscale address directly, so production requires a Cloudflare Tunnel or another public HTTPS route to the Daedalus gateway. Do not hard-code a public URL before that route exists.
+
+Apps must call the Daedalus LLM Gateway and must never call Ollama or port `11434` directly. If the gateway URL, API key, network route, authentication, or JSON response is invalid, the client reports a structured failure and Asguardian falls back to local cognition instead of breaking the command loop.
 
 The reusable client lives in `src/services/daedalusClient.js` and supports `health()`, `models()`, `json()`, `summarise()`, and `extractEvidence()`. The Asguardian task-state analysis service lives in `src/services/asguardianLlm.js`.
