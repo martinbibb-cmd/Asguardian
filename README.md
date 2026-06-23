@@ -202,3 +202,19 @@ The React Compiler is not enabled on this template because of its impact on dev 
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+
+## Daedalus LLM Gateway Configuration
+
+Asguardian LLM features use the shared Daedalus LLM Gateway. The app must only call the gateway and must not call Ollama or port `11434` directly.
+
+Set these variables for local development, Cloudflare Pages/Workers, or any future public Cloudflare Tunnel hostname:
+
+```bash
+DAEDALUS_LLM_BASE_URL=http://100.69.193.95:8787
+DAEDALUS_LLM_MODEL=llama3.2:3b
+DAEDALUS_LLM_API_KEY=<secret>
+```
+
+`DAEDALUS_LLM_BASE_URL` is intentionally configurable because Cloudflare Workers cannot reach the Tailscale development IP unless the Worker runs somewhere with Tailscale access. For deploys outside that network, switch it to a reachable HTTPS tunnel hostname such as `https://llm.<domain>`.
+
+The reusable client lives in `src/services/daedalusClient.js` and supports `health()`, `models()`, `json()`, `summarise()`, and `extractEvidence()`. The Asguardian task-state analysis service lives in `src/services/asguardianLlm.js`.
