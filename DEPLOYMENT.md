@@ -119,7 +119,7 @@ The AI backend worker is deployed separately to Cloudflare Workers. See [worker/
 The application uses these environment variables:
 
 - `VITE_API_ENDPOINT` - URL of the app API worker (set in workflow)
-- `DAEDALUS_LLM_BASE_URL` - Daedalus LLM Gateway base URL. `http://100.69.193.95:8787` is a Tailscale-only development address and works only from Tailscale-connected machines. Cloudflare Pages/Workers production requires a Cloudflare Tunnel or another public HTTPS route to the gateway; do not hard-code a public URL until that route exists.
+- `DAEDALUS_LLM_BASE_URL` - Daedalus LLM Gateway base URL. Use `https://ai.atlas-phm.uk` for production and shared environments; local development can still override it when testing a private gateway route.
 - `DAEDALUS_LLM_MODEL` - Default Daedalus model, for example `llama3.2:3b`
 - `DAEDALUS_LLM_API_KEY` - Secret sent as `x-daedalus-api-key` to the gateway. Never expose this value in logs, UI, errors, or snapshots.
 

@@ -210,12 +210,12 @@ Asguardian LLM features use the shared Daedalus LLM Gateway. The app must only c
 Set these variables for local development, Cloudflare Pages/Workers, or any future public Cloudflare Tunnel hostname:
 
 ```bash
-DAEDALUS_LLM_BASE_URL=http://100.69.193.95:8787
+DAEDALUS_LLM_BASE_URL=https://ai.atlas-phm.uk
 DAEDALUS_LLM_MODEL=llama3.2:3b
 DAEDALUS_LLM_API_KEY=<secret>
 ```
 
-`DAEDALUS_LLM_BASE_URL` is intentionally configurable. The Tailscale IP (`http://100.69.193.95:8787`) works only from Tailscale-connected machines. Cloudflare Pages/Workers production cannot reach that private Tailscale address directly, so production requires a Cloudflare Tunnel or another public HTTPS route to the Daedalus gateway. Do not hard-code a public URL before that route exists.
+`DAEDALUS_LLM_BASE_URL` is intentionally configurable. Use the public HTTPS Daedalus gateway at `https://ai.atlas-phm.uk` for production and shared environments; local development can still override it when testing a private gateway route.
 
 Apps must call the Daedalus LLM Gateway and must never call Ollama or port `11434` directly. If the gateway URL, API key, network route, authentication, or JSON response is invalid, the client reports a structured failure and Asguardian falls back to local cognition instead of breaking the command loop.
 
