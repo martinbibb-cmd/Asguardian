@@ -10,10 +10,10 @@ const gatewayEnv = {
   DAEDALUS_LLM_MODEL: 'llama3.2:3b',
 };
 
-const postCommand = (env = gatewayEnv) => worker.fetch(new Request('https://asguardian.test/api', {
+const postCommand = (env = gatewayEnv, body = { message: 'scout the perimeter', context: { heat: 12, biomass: 450, cycle: 3, phase: 'mechanical' } }) => worker.fetch(new Request('https://asguardian.test/api', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ message: 'scout the perimeter', context: { heat: 12, biomass: 450, cycle: 3, phase: 'mechanical' } }),
+  body: JSON.stringify(body),
 }), env);
 
 const getLlmHealth = (env = gatewayEnv) => worker.fetch(new Request('https://asguardian.test/api/llm-health'), env);
@@ -132,6 +132,100 @@ test('Pages catch-all preserves POST /api command route', async () => {
     assert.equal(response.status, 200);
     assert.equal(calledUrl, 'https://ai.atlas-phm.uk/v1/json');
     assert.equal(body.response, 'Command path reached gateway.');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('POST /api with message calls gateway and returns gateway json text', async () => {
+  const originalFetch = globalThis.fetch;
+  let calledUrl;
+  let requestBody;
+  globalThis.fetch = async (url, init) => {
+    calledUrl = String(url);
+    requestBody = JSON.parse(init.body);
+    return Response.json({
+      model: 'llama3.2:3b',
+      json: { response: 'LOCAL LLM ONLINE. The hive hears the gateway.' },
+      raw: '{"response":"LOCAL LLM ONLINE. The hive hears the gateway."}',
+    });
+  };
+
+  try {
+    const response = await postCommand(gatewayEnv, { message: 'Say LOCAL LLM ONLINE in character.' });
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(calledUrl, 'https://ai.atlas-phm.uk/v1/json');
+    assert.equal(requestBody.model, gatewayEnv.DAEDALUS_LLM_MODEL);
+    assert.equal(requestBody.prompt.includes('USER DIRECTIVE: Say LOCAL LLM ONLINE in character.'), true);
+    assert.deepEqual(requestBody.schema, { response: 'string' });
+    assert.equal(body.response, 'LOCAL LLM ONLINE. The hive hears the gateway.');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('POST /api with prompt calls gateway and returns gateway raw text', async () => {
+  const originalFetch = globalThis.fetch;
+  let requestBody;
+  globalThis.fetch = async (_url, init) => {
+    requestBody = JSON.parse(init.body);
+    return Response.json({
+      model: 'llama3.2:3b',
+      json: null,
+      raw: '{"message":"LOCAL LLM ONLINE through prompt input."}',
+    });
+  };
+
+  try {
+    const response = await postCommand(gatewayEnv, { prompt: 'Say LOCAL LLM ONLINE in character.' });
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(requestBody.prompt.includes('USER DIRECTIVE: Say LOCAL LLM ONLINE in character.'), true);
+    assert.equal(body.response, 'LOCAL LLM ONLINE through prompt input.');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('POST /api does not return silent fallback when gateway throws', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => {
+    throw new Error('gateway network failed');
+  };
+
+  try {
+    const response = await postCommand();
+    const body = await response.json();
+    const serialized = JSON.stringify(body);
+
+    assert.equal(response.status, 500);
+    assert.equal(body.error, 'Internal server error');
+    assert.equal(body.details, 'gateway network failed');
+    assert.equal(serialized.includes('The distributed cognition remains silent. Retry command.'), false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('POST /api reports gateway responses with no extractable text as failure', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => Response.json({
+    model: 'llama3.2:3b',
+    json: { unexpected: true },
+    raw: '{"unexpected":true}',
+  });
+
+  try {
+    const response = await postCommand();
+    const body = await response.json();
+    const serialized = JSON.stringify(body);
+
+    assert.equal(response.status, 500);
+    assert.equal(body.details, 'Daedalus LLM Gateway returned no extractable response text');
+    assert.equal(serialized.includes('The distributed cognition remains silent. Retry command.'), false);
   } finally {
     globalThis.fetch = originalFetch;
   }

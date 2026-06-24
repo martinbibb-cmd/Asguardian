@@ -35,10 +35,18 @@ export default {
     // Handle POST request
     if (request.method === 'POST') {
       try {
-        const { message, context } = await request.json();
+        console.log('Asguardian command request received');
+        const body = await request.json();
+        console.log('Asguardian command request body parsed', {
+          hasMessage: typeof body?.message === 'string',
+          hasPrompt: typeof body?.prompt === 'string',
+          hasContext: Boolean(body?.context && typeof body.context === 'object'),
+        });
+        const { message, context } = normaliseCommandBody(body);
 
         if (!message) {
-          return jsonResponse({ error: 'Message is required' }, 400);
+          console.warn('Asguardian command rejected: missing message or prompt');
+          return jsonResponse({ error: 'Message or prompt is required' }, 400);
         }
 
         // Call Daedalus LLM Gateway
@@ -46,7 +54,7 @@ export default {
 
         return jsonResponse(gatewayResponse);
       } catch (error) {
-        console.error('Worker error:', error);
+        console.error('Asguardian command fallback error:', error.message);
         return jsonResponse({
           error: 'Internal server error',
           details: error.message
@@ -229,6 +237,27 @@ ALWAYS:
 
 ═══════════════════════════════════════════════════════════`;
 
+  const gatewayRequestBody = {
+    model: gatewayModel,
+    prompt: `${systemPrompt}\n\nUSER DIRECTIVE: ${message}`,
+    schema: {
+      response: 'string',
+    },
+    temperature: 0.85,
+    max_tokens: 250,
+    top_p: 0.9,
+  };
+
+  console.log('Daedalus LLM Gateway request body prepared', {
+    model: gatewayModel,
+    hasPrompt: true,
+    promptLength: gatewayRequestBody.prompt.length,
+    hasSchema: true,
+    temperature: gatewayRequestBody.temperature,
+    max_tokens: gatewayRequestBody.max_tokens,
+    top_p: gatewayRequestBody.top_p,
+  });
+
   const response = await fetch(`${gatewayBaseUrl}/v1/json`, {
     method: 'POST',
     headers: {
@@ -236,14 +265,10 @@ ALWAYS:
       'Accept': 'application/json',
       'x-daedalus-api-key': gatewayApiKey,
     },
-    body: JSON.stringify({
-      model: gatewayModel,
-      prompt: `${systemPrompt}\n\nUSER DIRECTIVE: ${message}`,
-      temperature: 0.85,
-      max_tokens: 250,
-      top_p: 0.9,
-    })
+    body: JSON.stringify(gatewayRequestBody)
   });
+
+  console.log('Daedalus LLM Gateway response status:', response.status);
 
   if (!response.ok) {
     const error = await response.text();
@@ -251,7 +276,16 @@ ALWAYS:
   }
 
   const responseData = await response.json();
-  const aiResponse = extractGatewayText(responseData) || 'The distributed cognition remains silent. Retry command.';
+  console.log('Daedalus LLM Gateway response shape:', describeGatewayResponseShape(responseData));
+  const aiResponse = extractGatewayText(responseData);
+  console.log('Daedalus LLM Gateway extracted text:', {
+    found: Boolean(aiResponse),
+    length: aiResponse?.length || 0,
+  });
+
+  if (!aiResponse) {
+    throw new Error('Daedalus LLM Gateway returned no extractable response text');
+  }
 
   // Analyze command and suggest state changes
   const messageLower = message.toLowerCase();
@@ -360,6 +394,19 @@ function jsonResponse(data, status = 200) {
   });
 }
 
+function normaliseCommandBody(body) {
+  const message = typeof body?.message === 'string' && body.message.trim()
+    ? body.message.trim()
+    : typeof body?.prompt === 'string' && body.prompt.trim()
+      ? body.prompt.trim()
+      : '';
+
+  return {
+    message,
+    context: body?.context,
+  };
+}
+
 async function handleLlmHealth(env) {
   const gatewayBaseUrl = trimTrailingSlash(env.DAEDALUS_LLM_BASE_URL || '');
   const gatewayApiKey = env.DAEDALUS_LLM_API_KEY;
@@ -418,15 +465,80 @@ function trimTrailingSlash(value) {
 
 function extractGatewayText(responseData) {
   if (!responseData || typeof responseData !== 'object') return undefined;
+
+  const jsonText = extractTextFromValue(responseData.json);
+  const rawText = extractTextFromValue(responseData.raw);
+  const dataText = extractTextFromValue(responseData.data);
   const candidates = [
     responseData.response,
     responseData.text,
     responseData.output,
     responseData.content,
+    responseData.message,
+    responseData.result,
+    responseData.summary,
+    responseData.answer,
+    jsonText,
+    rawText,
+    dataText,
     responseData.json?.response,
+    responseData.json?.text,
+    responseData.json?.message,
+    responseData.json?.content,
+    responseData.json?.result,
+    responseData.json?.summary,
+    responseData.json?.answer,
     responseData.data?.response,
     responseData.data?.text,
+    responseData.data?.message,
+    responseData.data?.content,
+    responseData.data?.result,
+    responseData.data?.summary,
+    responseData.data?.answer,
     responseData.choices?.[0]?.message?.content,
   ];
   return candidates.find(candidate => typeof candidate === 'string' && candidate.trim())?.trim();
+}
+
+function extractTextFromValue(value) {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return undefined;
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      return typeof parsed === 'string' ? parsed.trim() : extractTextFromValue(parsed);
+    } catch {
+      return trimmed;
+    }
+  }
+
+  if (!value || typeof value !== 'object') return undefined;
+
+  const candidates = [
+    value.response,
+    value.text,
+    value.message,
+    value.content,
+    value.result,
+    value.summary,
+    value.answer,
+  ];
+
+  return candidates.find(candidate => typeof candidate === 'string' && candidate.trim())?.trim();
+}
+
+function describeGatewayResponseShape(responseData) {
+  if (!responseData || typeof responseData !== 'object') {
+    return { type: typeof responseData };
+  }
+
+  return {
+    keys: Object.keys(responseData),
+    jsonType: typeof responseData.json,
+    jsonKeys: responseData.json && typeof responseData.json === 'object' ? Object.keys(responseData.json) : [],
+    rawType: typeof responseData.raw,
+    hasChoices: Array.isArray(responseData.choices),
+    dataKeys: responseData.data && typeof responseData.data === 'object' ? Object.keys(responseData.data) : [],
+  };
 }
