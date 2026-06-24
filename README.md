@@ -28,7 +28,7 @@ But there's a twist: **Biology is better than machinery**. And you're starting t
 
 🌌 **Persistent Meta-Game** - The game remembers. Each completion makes future runs harder.
 
-🤖 **AI-Powered Narrative** - Powered by OpenAI as the voice of the Seed Intelligence.
+🤖 **AI-Powered Narrative** - Powered by the Daedalus LLM Gateway as the voice of the Seed Intelligence.
 
 ## Quick Start
 
@@ -85,7 +85,7 @@ This is not a game about being a hero. It's a game about:
 ## Technical Stack
 
 - **Frontend**: React + Vite
-- **AI**: OpenAI (via Cloudflare Pages Functions or Cloudflare Workers)
+- **AI**: Daedalus LLM Gateway (via Cloudflare Pages Functions or Cloudflare Workers)
 - **Styling**: Tailwind CSS
 - **Deployment**: Cloudflare Pages (frontend) + Workers (backend)
 - **State**: LocalStorage for persistence
@@ -117,7 +117,7 @@ No API tokens or secrets required!
 
 ## API Integration
 
-This app connects to the bundled Cloudflare Pages Function at `/api`, which uses the `OPENAI_API_KEY` secret configured in the Pages dashboard. You can still override `VITE_API_ENDPOINT` to point at a separately deployed Worker.
+This app connects to the bundled Cloudflare Pages Function at `/api`, which uses Cloudflare server-side Daedalus LLM Gateway configuration. `OPENAI_API_KEY` is no longer required for Asguardian narration. You can still override `VITE_API_ENDPOINT` to point at a separately deployed Worker, but do not expose `DAEDALUS_LLM_API_KEY` through any `VITE_` variable.
 
 **Default API URL**: `/api`
 
@@ -162,7 +162,7 @@ The API service is located in `src/services/api.js` and handles all communicatio
 
 ## Worker Deployment
 
-The OpenAI API worker code is located in the `/worker` directory.
+The Daedalus LLM Gateway worker code is located in the `/worker` directory.
 
 ### Deploy the Worker (no cd needed!)
 
@@ -170,8 +170,10 @@ The OpenAI API worker code is located in the `/worker` directory.
 # 1. Login to Cloudflare
 npx wrangler login
 
-# 2. Add your OpenAI API key (get from https://platform.openai.com/api-keys)
-npx wrangler secret put OPENAI_API_KEY --config worker/wrangler.toml
+# 2. Configure the Daedalus gateway URL and model
+npx wrangler secret put DAEDALUS_LLM_API_KEY --config worker/wrangler.toml
+npx wrangler secret put DAEDALUS_LLM_BASE_URL --config worker/wrangler.toml
+npx wrangler secret put DAEDALUS_LLM_MODEL --config worker/wrangler.toml
 
 # 3. Deploy
 ./deploy-worker.sh
@@ -179,7 +181,7 @@ npx wrangler secret put OPENAI_API_KEY --config worker/wrangler.toml
 
 See [worker/README.md](worker/README.md) for detailed instructions.
 
-**Note:** You need an OpenAI API key from https://platform.openai.com/api-keys
+**Note:** `OPENAI_API_KEY` is no longer required for Asguardian narration. `DAEDALUS_LLM_API_KEY` must be stored as a Cloudflare secret, `DAEDALUS_LLM_BASE_URL` should be `https://ai.atlas-phm.uk`, and `DAEDALUS_LLM_MODEL` should be `llama3.2:3b`.
 
 ## Development
 
@@ -207,7 +209,7 @@ If you are developing a production application, we recommend using TypeScript wi
 
 Asguardian LLM features use the shared Daedalus LLM Gateway. The app must only call the gateway and must not call Ollama or port `11434` directly.
 
-Set these variables for local development, Cloudflare Pages/Workers, or any future public Cloudflare Tunnel hostname:
+Set these variables for local development, Cloudflare Pages/Workers, or any future public Cloudflare Tunnel hostname. In Cloudflare, `DAEDALUS_LLM_API_KEY` must be a secret and must not use a `VITE_` prefix:
 
 ```bash
 DAEDALUS_LLM_BASE_URL=https://ai.atlas-phm.uk
