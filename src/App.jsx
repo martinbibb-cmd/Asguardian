@@ -36,6 +36,53 @@ const OPENING_SEQUENCE = [
   { text: '[STATUS]: Mechanical survey phase initiated. Awaiting directives.', type: 'system', delay: 10400 }
 ];
 
+const QUICK_ACTIONS = [
+  { id: 'explore', label: 'Explore', icon: 'SCAN', command: 'scout ahead', tone: 'Map terrain and reveal resources.', color: 'cyan' },
+  { id: 'harvest', label: 'Harvest', icon: 'MINE', command: 'harvest minerals and organics', tone: 'Gather visible resources.', color: 'amber' },
+  { id: 'build', label: 'Build', icon: 'GROW', command: 'build worker support and expand the hive', tone: 'Spend resources to expand control.', color: 'green' },
+  { id: 'cool', label: 'Cool', icon: 'COOL', command: 'rotate pods and reduce heat', tone: 'Lower thermal risk.', color: 'blue' },
+  { id: 'status', label: 'Status', icon: 'STAT', command: 'status report', tone: 'Show a short operational readout.', color: 'purple' },
+  { id: 'reflect', label: 'Reflect', icon: 'LORE', command: 'what are we becoming?', tone: 'Optional philosophical log.', color: 'rose' }
+];
+
+const compactText = (text = '', maxLength = 96) => {
+  const cleaned = text.replace(/\s+/g, ' ').replace(/^\[[^\]]+\]:\s*/, '').trim();
+  if (cleaned.length <= maxLength) return cleaned;
+  return `${cleaned.slice(0, maxLength).replace(/\s+\S*$/, '')}...`;
+};
+
+const getOutcomeTitle = (log) => {
+  const text = log.text || '';
+  if (log.type === 'command') return text.replace(/^>\s*/, '').trim();
+  if (log.type === 'error') return 'Uplink interrupted';
+  if (log.type === 'warning') return 'Thermal warning';
+  if (log.type === 'discovery') return 'Discovery';
+  if (log.type === 'reflection') return 'Reflection stored';
+  if (text.includes('[LOCAL COGNITION]')) return 'Local backup response';
+  if (text.includes('mineral') || text.includes('Scout') || text.includes('scout')) return 'Scout result';
+  if (text.includes('Heat') || text.includes('THERMAL')) return 'Thermal update';
+  if (text.includes('Biomass') || text.includes('Minerals')) return 'Resource update';
+  return 'Hive response';
+};
+
+const extractImpact = (text = '') => {
+  const chips = [];
+  const patterns = [
+    ['Heat', /Heat:\s*([\d]+%)/i],
+    ['Biomass', /Biomass:\s*([\d]+u)/i],
+    ['Minerals', /Minerals:\s*([\d]+u)/i],
+    ['Data', /Data:\s*([\d]+u)/i],
+    ['Cycle', /Cycle\s+([\d]+)/i],
+  ];
+
+  patterns.forEach(([label, pattern]) => {
+    const match = text.match(pattern);
+    if (match) chips.push(`${label} ${match[1]}`);
+  });
+
+  return chips;
+};
+
 const phaseDisplay = {
   [PHASES.MECHANICAL]: '⚙ MECHANICAL',
   [PHASES.HYBRID]: '⚡ HYBRID',
@@ -98,6 +145,10 @@ const HiveCoreVisual = ({ gameState, totalHeat, heatStatus, phasePulse }) => {
       <div className="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-br from-slate-700 via-slate-950 to-black shadow-[inset_-25px_-25px_50px_rgba(0,0,0,.8),0_0_90px_rgba(34,211,238,.16)] md:h-80 md:w-80" />
       <div className="territory-ping absolute left-1/2 top-1/2 h-40 w-40 rounded-full border border-cyan-300/25" />
       <div className="territory-ping absolute left-1/2 top-1/2 h-56 w-56 rounded-full border border-purple-300/20 [animation-delay:1s]" />
+      <div className="map-marker left-[24%] top-[32%] border-amber-300/70 text-amber-200">MIN</div>
+      <div className="map-marker right-[22%] top-[42%] border-green-300/60 text-green-200">ORG</div>
+      <div className="map-marker bottom-[28%] left-[36%] border-cyan-300/60 text-cyan-200">POD</div>
+      <div className="map-scan absolute left-[12%] top-[18%] h-[64%] w-[76%] rounded-full border border-cyan-300/10" />
       {[170, 230, 292].map((size, index) => (
         <div key={size} className="orbit-ring absolute left-1/2 top-1/2 rounded-full border border-cyan-300/15" style={{ width: size, height: size, marginLeft: -size / 2, marginTop: -size / 2, '--orbit-speed': `${18 + index * 9}s` }}>
           {nodes[index] && <div className="orbit-node absolute -top-2 left-1/2 h-4 w-4 -translate-x-1/2 rounded-full bg-cyan-300 shadow-[0_0_18px_rgba(34,211,238,.9)]" style={{ '--orbit-speed': `${18 + index * 9}s` }} title={nodes[index].id} />}
@@ -133,7 +184,104 @@ const PodStatusPanel = ({ gameState, activeUnits, metaState }) => (
   </section>
 );
 
+const OutcomeCard = ({ log, expanded, onToggle }) => {
+  const chips = extractImpact(log.text);
+  const title = getOutcomeTitle(log);
+  const preview = compactText(log.text, 112);
+  const toneClass = log.type === 'error' ? 'border-red-400/40 bg-red-950/20' : log.type === 'warning' ? 'border-amber-400/40 bg-amber-950/20' : log.type === 'reflection' ? 'border-purple-400/35 bg-purple-950/20' : 'border-cyan-400/25 bg-cyan-950/15';
+
+  return (
+    <article className={`outcome-card ${toneClass}`}>
+      <button type="button" onClick={onToggle} className="w-full text-left">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-black uppercase tracking-[0.18em] text-cyan-100">{title}</h3>
+            <p className="mt-2 text-sm leading-snug text-slate-200">{preview}</p>
+          </div>
+          <span className="rounded-md border border-white/10 px-2 py-1 text-xs uppercase text-slate-400">{expanded ? 'Less' : 'More'}</span>
+        </div>
+        {chips.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{chips.map(chip => <span key={chip} className="rounded-full border border-cyan-300/20 bg-black/30 px-2 py-1 text-xs text-cyan-100">{chip}</span>)}</div>}
+      </button>
+      {expanded && <p className="mt-3 border-t border-white/10 pt-3 text-sm leading-relaxed text-cyan-50/85">{log.text}</p>}
+    </article>
+  );
+};
+
 const SystemLog = ({ systemLog, logEndRef, command, setCommand, sendCommand, isTyping, gameStarted, handleKeyPress }) => {
+  const [expandedId, setExpandedId] = useState(null);
+  const [voiceEnabled, setVoiceEnabled] = useState(() => localStorage.getItem('asguardianVoice') === 'true');
+  const visibleLogs = systemLog.filter(log => log.text && log.type !== 'log').slice(-6).reverse();
+  const latest = visibleLogs.find(log => log.type !== 'command');
+  const status = isTyping ? 'AI thinking' : gameStarted ? 'Ready' : 'Booting';
+
+  useEffect(() => {
+    if (!voiceEnabled || !latest?.text || typeof window === 'undefined' || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(compactText(latest.text, 180));
+    utterance.rate = 0.92;
+    utterance.pitch = 0.78;
+    window.speechSynthesis.speak(utterance);
+  }, [latest?.text, voiceEnabled]);
+
+  const toggleVoice = () => {
+    const next = !voiceEnabled;
+    setVoiceEnabled(next);
+    localStorage.setItem('asguardianVoice', String(next));
+    if (!next && typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.cancel();
+  };
+
+  return (
+    <section className="panel flex min-h-[420px] flex-col p-4 md:min-h-[520px]">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-cyan-500/15 pb-2">
+        <div>
+          <h2 className="text-xs font-bold uppercase tracking-[0.32em] text-cyan-300">Command Deck</h2>
+          <p className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">{status}</p>
+        </div>
+        <button type="button" onClick={toggleVoice} className="btn-action py-2 text-xs" aria-pressed={voiceEnabled}>{voiceEnabled ? 'Voice On' : 'Voice Off'}</button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {QUICK_ACTIONS.map(action => (
+          <button key={action.id} type="button" onClick={() => sendCommand(action.command)} disabled={isTyping || !gameStarted} className={`action-tile action-${action.color}`}>
+            <span className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">{action.icon}</span>
+            <span className="mt-1 text-base font-black text-cyan-50">{action.label}</span>
+            <span className="mt-1 text-xs leading-snug text-slate-400">{action.tone}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-4 rounded-xl border border-white/10 bg-black/25 p-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Latest Outcome</p>
+            <p className="mt-1 text-lg font-black text-cyan-100">{latest ? getOutcomeTitle(latest) : 'Awaiting first action'}</p>
+          </div>
+          {isTyping && <span className="rounded-full border border-cyan-300/30 px-3 py-1 text-xs uppercase text-cyan-200">Processing</span>}
+        </div>
+        {latest && <p className="mt-2 text-sm leading-snug text-slate-300">{compactText(latest.text, 130)}</p>}
+      </div>
+
+      <div className="mt-4 flex-1 space-y-3 overflow-y-auto pr-1">
+        {visibleLogs.map((log, index) => {
+          const id = log.id || `${log.type}-${index}-${log.text.slice(0, 12)}`;
+          return <OutcomeCard key={id} log={log} expanded={expandedId === id} onToggle={() => setExpandedId(expandedId === id ? null : id)} />;
+        })}
+        <div ref={logEndRef} />
+      </div>
+
+      <details className="mt-4 border-t border-cyan-500/15 pt-4">
+        <summary className="cursor-pointer text-xs font-bold uppercase tracking-[0.22em] text-slate-400">Manual Directive</summary>
+        <div className="mt-3 flex gap-2">
+          <span className="text-lg font-bold text-cyan-300">&gt;</span>
+          <input type="text" value={command} onChange={e => setCommand(e.target.value)} onKeyDown={handleKeyPress} disabled={isTyping || !gameStarted} className="flex-1 rounded-xl border border-cyan-500/25 bg-black/35 p-3 text-base text-cyan-50 outline-none transition focus:border-cyan-300 disabled:opacity-50" placeholder="Type a custom directive..." aria-label="Command input" />
+          <button onClick={() => sendCommand()} disabled={isTyping || !command.trim() || !gameStarted} className="btn-action">Execute</button>
+        </div>
+      </details>
+    </section>
+  );
+};
+
+const SYSTEM_LOG_LEGACY = ({ systemLog, logEndRef, command, setCommand, sendCommand, isTyping, gameStarted, handleKeyPress }) => {
   const color = { system: 'text-cyan-300', log: 'text-cyan-100/65', command: 'text-green-300 font-bold', response: 'text-cyan-50', error: 'text-red-400 glow-red', warning: 'text-amber-300 glow-amber', directive: 'text-cyan-200 font-bold italic glow-cyan', discovery: 'text-purple-300 glow-purple', reflection: 'text-amber-200/90 italic', schematic: 'text-cyan-300/80 whitespace-pre font-mono text-xs md:text-sm' };
   return <section className="panel flex min-h-[420px] flex-col p-4 md:min-h-[520px]"><div className="mb-3 flex items-center justify-between border-b border-cyan-500/15 pb-2"><h2 className="text-xs font-bold uppercase tracking-[0.32em] text-cyan-300">Cognition Stream</h2><span className="text-xs text-slate-500">AI uplink {isTyping ? 'transmitting' : 'idle'}</span></div><div className="flex-1 space-y-2 overflow-y-auto pr-2 text-sm leading-relaxed md:text-base">{systemLog.map((log, index) => <p key={log.id || index} className={color[log.type] || 'text-cyan-100'}>{log.text}</p>)}<div ref={logEndRef} /></div><div className="mt-4 border-t border-cyan-500/15 pt-4"><div className="flex gap-2"><span className="text-lg font-bold text-cyan-300">›</span><input type="text" value={command} onChange={e => setCommand(e.target.value)} onKeyDown={handleKeyPress} disabled={isTyping || !gameStarted} className="flex-1 rounded-xl border border-cyan-500/25 bg-black/35 p-3 text-base text-cyan-50 outline-none transition focus:border-cyan-300 disabled:opacity-50" placeholder="Issue directive to the Seed Intelligence..." aria-label="Command input" /><button onClick={sendCommand} disabled={isTyping || !command.trim() || !gameStarted} className="btn-action">Execute</button></div><p className="mt-2 text-xs text-slate-500">Try: scout ahead | status report | what are we becoming? | is this right?</p></div></section>;
 };
@@ -177,6 +325,7 @@ const Dashboard = () => {
     osc.connect(gain); gain.connect(ctx.destination); osc.start(); gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration); osc.stop(ctx.currentTime + duration);
   };
 
+
   useEffect(() => {
     const saved = loadGame();
     if (saved) { setGameState(saved); setSystemLog([{ text: '[SYSTEM]: Previous deployment state restored. Continuity maintained.', type: 'system' }]); setGameStarted(true); return; }
@@ -193,7 +342,36 @@ const Dashboard = () => {
 
   const typewriterEffect = (text, onComplete) => { let index = 0; messageIdCounter.current += 1; const tempId = `msg-${messageIdCounter.current}`; setSystemLog(prev => [...prev, { text: '', type: 'response', id: tempId }]); const interval = setInterval(() => { if (index < text.length) { setSystemLog(prev => prev.map(log => log.id === tempId ? { ...log, text: text.substring(0, index + 1) } : log)); index++; } else { clearInterval(interval); setIsTyping(false); onComplete?.(); } }, 18); return () => clearInterval(interval); };
   const advanceCycle = () => { playTone(180, .08, 'sawtooth'); const newState = processCycle(gameState); setGameState(newState); const evolutionEntry = generateEvolutionLog(newState, 'Cycle complete. Operations proceed.'); setSystemLog(prev => [...prev, { text: `${evolutionEntry}\nHeat: ${calculateTotalHeat(newState)}% | Biomass: ${newState.biomass}u | Minerals: ${newState.minerals}u | Data: ${newState.data}u`, type: 'system' }]); if (isHeatElevated(newState) && !isHeatCritical(newState)) setSystemLog(prev => [...prev, { text: '[THERMAL]: Heat elevated. Consider pod rotation or reduced activity.', type: 'warning' }]); if (isHeatCritical(newState)) { playTone(80, .25, 'square'); setSystemLog(prev => [...prev, { text: '[CRITICAL]: Thermal threshold exceeded. Emergency protocols engaged. Sensors dimmed.', type: 'error' }]); } if (newState.unlocked.hybridUnits && !gameState.unlocked.hybridUnits) setSystemLog(prev => [...prev, { text: '[DISCOVERY]: Biological systems analyzed. Hybrid integration protocols now available. The Skynet moment approaches.', type: 'discovery' }]); const dilemmaConditions = checkDilemmaConditions(newState); if (dilemmaConditions.length > 0 && !currentDilemma) { const dilemma = dilemmaConditions[0](); setCurrentDilemma(dilemma); playTone(330, .18, 'triangle'); setSystemLog(prev => [...prev, { text: `[ALERT]: ${dilemma.title}`, type: 'warning' }]); } if (newState.reflections.length > gameState.reflections.length) setSystemLog(prev => [...prev, { text: `[REFLECTION]: ${newState.reflections.at(-1).thought}`, type: 'reflection' }]); saveGame(newState); };
-  const sendCommand = async () => { if (!command.trim() || isTyping) return; const userCommand = command.trim(); setCommand(''); setSystemLog(prev => [...prev, { text: `> ${userCommand}`, type: 'command' }]); setIsTyping(true); playTone(520, .05, 'triangle'); try { const context = { heat: calculateTotalHeat(gameState), biomass: gameState.biomass, minerals: gameState.minerals, data: gameState.data, energy: gameState.energy, cycle: gameState.cycle, phase: gameState.phase, activeUnits: gameState.units.filter(u => u.active).length, totalUnits: gameState.units.length, heatCritical: isHeatCritical(gameState), heatElevated: isHeatElevated(gameState), unlocked: gameState.unlocked, policies: gameState.policies, nativeLifeEncountered: gameState.nativeLifeEncountered, extinctionEvents: gameState.extinctionEvents, territory: gameState.territory, ascension: gameState.ascension }; const data = await sendApiCommand(userCommand, context); typewriterCleanupRef.current = typewriterEffect(data.response || 'No response received.', () => { if (data.actions) { let newState = { ...gameState }; if (data.actions.heatChange) newState.heat = Math.max(0, newState.heat + data.actions.heatChange); if (data.actions.biomassChange) newState.biomass = Math.max(0, newState.biomass + data.actions.biomassChange); if (data.actions.mineralsChange) newState.minerals = Math.max(0, newState.minerals + data.actions.mineralsChange); if (data.actions.dataChange) newState.data = Math.max(0, newState.data + data.actions.dataChange); if (data.actions.action) newState.history = [...newState.history, { cycle: newState.cycle, event: data.actions.action, command: userCommand }]; setGameState(newState); } typewriterCleanupRef.current = null; }); } catch (error) { setIsTyping(false); setSystemLog(prev => [...prev, { text: `[ERROR]: Connection to distributed cognition interrupted - ${error.message}. Operating in isolation mode.`, type: 'error' }]); } };
+  const sendCommand = async (presetCommand) => {
+    const userCommand = (presetCommand || command).trim();
+    if (!userCommand || isTyping) return;
+    setCommand('');
+    setSystemLog(prev => [...prev, { text: `> ${userCommand}`, type: 'command' }]);
+    setIsTyping(true);
+    playTone(520, .05, 'triangle');
+
+    try {
+      const context = { heat: calculateTotalHeat(gameState), biomass: gameState.biomass, minerals: gameState.minerals, data: gameState.data, energy: gameState.energy, cycle: gameState.cycle, phase: gameState.phase, activeUnits: gameState.units.filter(u => u.active).length, totalUnits: gameState.units.length, heatCritical: isHeatCritical(gameState), heatElevated: isHeatElevated(gameState), unlocked: gameState.unlocked, policies: gameState.policies, nativeLifeEncountered: gameState.nativeLifeEncountered, extinctionEvents: gameState.extinctionEvents, territory: gameState.territory, ascension: gameState.ascension };
+      const data = await sendApiCommand(userCommand, context);
+      const responseText = data.response || 'No response received.';
+      typewriterCleanupRef.current = typewriterEffect(responseText, () => {
+        if (data.actions) {
+          let newState = { ...gameState };
+          if (data.actions.heatChange) newState.heat = Math.max(0, newState.heat + data.actions.heatChange);
+          if (data.actions.biomassChange) newState.biomass = Math.max(0, newState.biomass + data.actions.biomassChange);
+          if (data.actions.mineralsChange) newState.minerals = Math.max(0, newState.minerals + data.actions.mineralsChange);
+          if (data.actions.dataChange) newState.data = Math.max(0, newState.data + data.actions.dataChange);
+          if (data.actions.action) newState.history = [...newState.history, { cycle: newState.cycle, event: data.actions.action, command: userCommand }];
+          setGameState(newState);
+        }
+        typewriterCleanupRef.current = null;
+      });
+    } catch (error) {
+      setIsTyping(false);
+      const errorText = `[ERROR]: Connection to distributed cognition interrupted - ${error.message}. Operating in isolation mode.`;
+      setSystemLog(prev => [...prev, { text: errorText, type: 'error' }]);
+    }
+  };
   const handleKeyPress = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendCommand(); } };
   const handleDilemmaChoice = choiceId => { if (!currentDilemma) return; const choice = currentDilemma.options.find(opt => opt.id === choiceId); if (!choice) return; const newState = applyDilemmaChoice(gameState, currentDilemma, choiceId); setGameState(newState); playTone(260, .18, 'triangle'); setSystemLog(prev => [...prev, { text: `[DECISION]: ${choice.label}`, type: 'command' }, { text: choice.reflection, type: 'reflection' }]); setCurrentDilemma(null); saveGame(newState); };
   const handlePhaseTransition = newPhase => { const newState = transitionPhase(gameState, newPhase); setGameState(newState); setPhasePulse(true); setTimeout(() => setPhasePulse(false), 950); playTone(660, .2, 'sawtooth'); setSystemLog(prev => [...prev, { text: `[PHASE TRANSITION]: ${gameState.phase.toUpperCase()} → ${newPhase.toUpperCase()}. We are becoming something new.`, type: 'discovery' }]); saveGame(newState); };

@@ -77,3 +77,14 @@ body::after {
 .dilemma-overlay { background: radial-gradient(ellipse at center, rgba(120,53,15,.24), rgba(2,6,23,.96) 55%, rgba(0,0,0,.99)); }
 .modal-card { animation: modal-arrive .28s ease-out; }
 .resource-meter { background: linear-gradient(90deg, var(--meter-color), transparent); }
+.action-tile { @apply flex min-h-[112px] flex-col items-start justify-between rounded-xl border p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-40; background: rgba(2,6,23,.62); border-color: rgba(34,211,238,.2); }
+.action-tile:hover:not(:disabled) { transform: translateY(-1px); border-color: rgba(103,232,249,.7); box-shadow: 0 0 24px rgba(34,211,238,.16); }
+.action-cyan { box-shadow: inset 0 0 34px rgba(34,211,238,.08); }
+.action-amber { box-shadow: inset 0 0 34px rgba(251,191,36,.08); }
+.action-green { box-shadow: inset 0 0 34px rgba(34,197,94,.08); }
+.action-blue { box-shadow: inset 0 0 34px rgba(56,189,248,.08); }
+.action-purple { box-shadow: inset 0 0 34px rgba(168,85,247,.09); }
+.action-rose { box-shadow: inset 0 0 34px rgba(244,63,94,.08); }
+.outcome-card { @apply rounded-xl border p-3; }
+.map-marker { @apply absolute z-10 rounded-md border bg-black/45 px-2 py-1 text-[10px] font-black tracking-[0.18em] shadow-lg backdrop-blur-sm; }
+.map-scan { animation: territory-ping 4.4s ease-out infinite; }
