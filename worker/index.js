@@ -2,7 +2,7 @@
  * SEED / HIVE / ASCENSION - AI Worker
  * 
  * Cloudflare Worker for the Seed Intelligence narrative engine.
- * Integrates with OpenAI API as the emergent narrator.
+ * Integrates with the Daedalus LLM Gateway as the emergent narrator.
  * 
  * "The LLM decorates. The logic decides."
  */
@@ -35,10 +35,10 @@ export default {
           return jsonResponse({ error: 'Message is required' }, 400);
         }
 
-        // Call OpenAI API
-        const openAIResponse = await callOpenAIAPI(message, context, env);
+        // Call Daedalus LLM Gateway
+        const gatewayResponse = await callDaedalusGateway(message, context, env);
 
-        return jsonResponse(openAIResponse);
+        return jsonResponse(gatewayResponse);
       } catch (error) {
         console.error('Worker error:', error);
         return jsonResponse({
@@ -53,13 +53,23 @@ export default {
 };
 
 /**
- * Call OpenAI API with comprehensive Seed Intelligence context
+ * Call Daedalus LLM Gateway with comprehensive Seed Intelligence context.
  */
-async function callOpenAIAPI(message, context, env) {
-  const OPENAI_API_KEY = env.OPENAI_API_KEY;
+async function callDaedalusGateway(message, context, env) {
+  const gatewayBaseUrl = trimTrailingSlash(env.DAEDALUS_LLM_BASE_URL || '');
+  const gatewayApiKey = env.DAEDALUS_LLM_API_KEY;
+  const gatewayModel = env.DAEDALUS_LLM_MODEL;
 
-  if (!OPENAI_API_KEY) {
-    throw new Error('OPENAI_API_KEY not configured');
+  if (!gatewayBaseUrl) {
+    throw new Error('DAEDALUS_LLM_BASE_URL not configured');
+  }
+
+  if (!gatewayApiKey) {
+    throw new Error('DAEDALUS_LLM_API_KEY not configured');
+  }
+
+  if (!gatewayModel) {
+    throw new Error('DAEDALUS_LLM_MODEL not configured');
   }
 
   // Extract context with defaults
@@ -209,18 +219,16 @@ ALWAYS:
 
 ═══════════════════════════════════════════════════════════`;
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+  const response = await fetch(`${gatewayBaseUrl}/v1/json`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${OPENAI_API_KEY}`,
+      'Accept': 'application/json',
+      'x-daedalus-api-key': gatewayApiKey,
     },
     body: JSON.stringify({
-      model: env.OPENAI_MODEL || 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: message },
-      ],
+      model: gatewayModel,
+      prompt: `${systemPrompt}\n\nUSER DIRECTIVE: ${message}`,
       temperature: 0.85,
       max_tokens: 250,
       top_p: 0.9,
@@ -229,11 +237,11 @@ ALWAYS:
 
   if (!response.ok) {
     const error = await response.text();
-    throw new Error(`OpenAI API error: ${response.status} - ${error}`);
+    throw new Error(`Daedalus LLM Gateway error: ${response.status} - ${error}`);
   }
 
   const responseData = await response.json();
-  const aiResponse = responseData.choices?.[0]?.message?.content?.trim() || 'The distributed cognition remains silent. Retry command.';
+  const aiResponse = extractGatewayText(responseData) || 'The distributed cognition remains silent. Retry command.';
 
   // Analyze command and suggest state changes
   const messageLower = message.toLowerCase();
@@ -340,4 +348,23 @@ function jsonResponse(data, status = 200) {
     status,
     headers: corsHeaders()
   });
+}
+
+function trimTrailingSlash(value) {
+  return value.replace(/\/+$/, '');
+}
+
+function extractGatewayText(responseData) {
+  if (!responseData || typeof responseData !== 'object') return undefined;
+  const candidates = [
+    responseData.response,
+    responseData.text,
+    responseData.output,
+    responseData.content,
+    responseData.json?.response,
+    responseData.data?.response,
+    responseData.data?.text,
+    responseData.choices?.[0]?.message?.content,
+  ];
+  return candidates.find(candidate => typeof candidate === 'string' && candidate.trim())?.trim();
 }

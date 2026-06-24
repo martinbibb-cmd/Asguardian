@@ -1,5 +1,5 @@
 /**
- * API Service for communicating with the OpenAI endpoint.
+ * API Service for communicating with the Asguardian command endpoint.
  *
  * Static hosts can render ASGUARDIAN without a server-side runtime. If the
  * configured worker is unreachable, directives fall back to deterministic local
@@ -7,8 +7,9 @@
  * network error to the player.
  */
 
-const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT || '/api';
-const USE_LOCAL_DIRECTIVES = import.meta.env.VITE_USE_LOCAL_DIRECTIVES === 'true';
+const runtimeEnv = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : {};
+const API_ENDPOINT = runtimeEnv.VITE_API_ENDPOINT || '/api';
+const USE_LOCAL_DIRECTIVES = runtimeEnv.VITE_USE_LOCAL_DIRECTIVES === 'true';
 
 const commandIncludes = (message, terms) => terms.some(term => message.toLowerCase().includes(term));
 
@@ -52,7 +53,7 @@ const buildLocalResponse = (message, context = {}, reason = 'remote uplink unava
 };
 
 /**
- * Send a command to the OpenAI endpoint.
+ * Send a command to the Asguardian command endpoint.
  * @param {string} message - The user's command/message
  * @param {Object} context - Game context (heat, biomass, units)
  * @returns {Promise<Object>} Response from the AI or local fallback cognition

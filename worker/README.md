@@ -1,6 +1,6 @@
-# Asgardian OpenAI Worker
+# Asgardian Daedalus LLM Gateway Worker
 
-Cloudflare Worker that provides OpenAI integration for the Asgardian Seed Intelligence game.
+Cloudflare Worker that provides Daedalus LLM Gateway integration for the Asgardian Seed Intelligence game. The worker calls `POST ${DAEDALUS_LLM_BASE_URL}/v1/json` server-side and never exposes `DAEDALUS_LLM_API_KEY` to frontend code.
 
 ## Deployment
 
@@ -10,9 +10,14 @@ Cloudflare Worker that provides OpenAI integration for the Asgardian Seed Intell
 # 1. Login to Cloudflare
 npx wrangler login
 
-# 2. Set your OpenAI API key
-npx wrangler secret put OPENAI_API_KEY --config worker/wrangler.toml
-# Get key from: https://platform.openai.com/api-keys
+# 2. Set Daedalus gateway configuration
+# DAEDALUS_LLM_API_KEY must be a Cloudflare secret. Do not use VITE_ for this value.
+npx wrangler secret put DAEDALUS_LLM_API_KEY --config worker/wrangler.toml
+# Recommended values:
+# DAEDALUS_LLM_BASE_URL=https://ai.atlas-phm.uk
+# DAEDALUS_LLM_MODEL=llama3.2:3b
+npx wrangler secret put DAEDALUS_LLM_BASE_URL --config worker/wrangler.toml
+npx wrangler secret put DAEDALUS_LLM_MODEL --config worker/wrangler.toml
 
 # 3. Deploy
 ./deploy-worker.sh
@@ -47,7 +52,11 @@ curl -X POST https://asguard.martinbibb.workers.dev \
 
 ## Environment Variables
 
-- `OPENAI_API_KEY` - Required. Your OpenAI API key
+- `DAEDALUS_LLM_BASE_URL` - Required. Should be `https://ai.atlas-phm.uk` for shared/prod environments.
+- `DAEDALUS_LLM_API_KEY` - Required Cloudflare secret. Do not expose it to the frontend and do not prefix it with `VITE_`.
+- `DAEDALUS_LLM_MODEL` - Required. Should be `llama3.2:3b`.
+
+`OPENAI_API_KEY` is no longer required for Asguardian narration. The worker must not call Ollama directly or use port `11434`.
 
 ## API Endpoints
 
@@ -59,7 +68,7 @@ Health check endpoint. Returns worker status.
 ```json
 {
   "status": "online",
-  "service": "Asgardian OpenAI Worker",
+  "service": "SEED INTELLIGENCE v1.0",
   "version": "1.0.0"
 }
 ```
@@ -84,9 +93,13 @@ Send a command to the AI.
 ```json
 {
   "response": "AI generated response",
-  "heat": 12,
-  "biomass": 450,
-  "units": ["unit1", "unit2"]
+  "actions": { "action": "scout" },
+  "context": {
+    "heat": 12,
+    "biomass": 450,
+    "cycle": 1,
+    "phase": "mechanical"
+  }
 }
 ```
 
