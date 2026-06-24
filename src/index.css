@@ -80,6 +80,20 @@ body::after {
 .action-tile { @apply flex min-h-[112px] flex-col items-start justify-between rounded-xl border p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-40; background: rgba(2,6,23,.62); border-color: rgba(34,211,238,.2); }
 .action-tile:hover:not(:disabled) { transform: translateY(-1px); border-color: rgba(103,232,249,.7); box-shadow: 0 0 24px rgba(34,211,238,.16); }
 .action-tile-suggested { border-color: rgba(125,211,252,.78); box-shadow: 0 0 26px rgba(34,211,238,.2), inset 0 0 24px rgba(34,211,238,.12); }
+.pressure-stat { @apply rounded-lg border border-white/10 bg-black/25 p-2; }
+.pressure-stat span { @apply block text-[10px] uppercase tracking-[0.18em] text-slate-500; }
+.pressure-stat strong { @apply mt-1 block text-lg text-cyan-100; }
+.warning-chip { @apply block rounded-lg border border-cyan-300/15 bg-cyan-950/10 px-3 py-2 text-left; }
+.warning-chip span { @apply block text-xs font-black uppercase tracking-[0.18em] text-cyan-100; }
+.warning-chip small { @apply mt-1 block text-xs leading-snug text-slate-400; }
+.warning-warning { border-color: rgba(251,191,36,.42); background: rgba(120,53,15,.18); }
+.warning-warning span { color: rgb(253,230,138); }
+.warning-critical { border-color: rgba(248,113,113,.55); background: rgba(127,29,29,.24); }
+.warning-critical span { color: rgb(252,165,165); }
+.playstyle-tile { @apply block w-full rounded-xl border border-cyan-400/15 bg-black/25 p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-50; }
+.playstyle-tile:hover:not(:disabled), .playstyle-active { border-color: rgba(103,232,249,.7); box-shadow: inset 0 0 24px rgba(34,211,238,.12); }
+.playstyle-tile span { @apply block text-sm font-black uppercase tracking-[0.14em] text-cyan-100; }
+.playstyle-tile small { @apply mt-1 block text-xs leading-snug text-slate-400; }
 .action-cyan { box-shadow: inset 0 0 34px rgba(34,211,238,.08); }
 .action-amber { box-shadow: inset 0 0 34px rgba(251,191,36,.08); }
 .action-green { box-shadow: inset 0 0 34px rgba(34,197,94,.08); }
@@ -89,6 +103,11 @@ body::after {
 .outcome-card { @apply rounded-xl border p-3; }
 .outcome-card-low-reading { @apply text-lg; }
 .map-marker { @apply absolute z-10 rounded-md border bg-black/45 px-2 py-1 text-[10px] font-black tracking-[0.18em] shadow-lg backdrop-blur-sm; }
+.map-scar { @apply absolute z-10 -translate-x-1/2 -translate-y-1/2 rounded border bg-black/70 px-1.5 py-1 text-[8px] font-black uppercase tracking-[0.12em] shadow-lg; }
+.map-scar-scorch { border-color: rgba(248,113,113,.72); color: rgb(252,165,165); box-shadow: 0 0 18px rgba(239,68,68,.2); }
+.map-scar-wither { border-color: rgba(74,222,128,.48); color: rgb(134,239,172); filter: saturate(.65); }
+.map-scar-depleted, .map-scar-stripmine { border-color: rgba(251,191,36,.58); color: rgb(253,230,138); }
+.map-scar-fracture { border-color: rgba(216,180,254,.58); color: rgb(216,180,254); }
 .map-scan { animation: territory-ping 4.4s ease-out infinite; }
 .map-sector { @apply absolute z-10 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border text-[9px] font-black tracking-[0.16em] transition-all duration-500; }
 .map-sector-fog { border-color: rgba(148,163,184,.12); background: repeating-linear-gradient(135deg, rgba(15,23,42,.82), rgba(15,23,42,.82) 5px, rgba(30,41,59,.62) 5px, rgba(30,41,59,.62) 10px); filter: blur(.2px); opacity: .72; }
@@ -99,6 +118,31 @@ body::after {
 .map-action-cool .hive-core { box-shadow: 0 0 42px rgba(56,189,248,.45); }
 .low-reading-mode .panel { font-size: 1.05rem; }
 .low-reading-mode .action-tile { min-height: 96px; }
+.screen-tabs { @apply flex gap-2 overflow-x-auto rounded-2xl border border-cyan-500/15 bg-slate-950/55 p-2; }
+.screen-tabs button { @apply rounded-xl border border-transparent px-3 py-2 text-xs font-black uppercase tracking-[0.18em] text-slate-400 transition; }
+.screen-tabs button:hover, .screen-tab-active { border-color: rgba(103,232,249,.55) !important; color: rgb(207,250,254) !important; background: rgba(8,47,73,.35); }
+.generated-visual { @apply flex min-h-56 items-center justify-center overflow-hidden rounded-xl border border-cyan-400/20 bg-slate-950 text-xs font-black uppercase tracking-[0.22em] text-cyan-100; background-image: radial-gradient(circle at 35% 30%, rgba(34,211,238,.3), transparent 28%), radial-gradient(circle at 70% 70%, rgba(34,197,94,.18), transparent 24%), linear-gradient(135deg, rgba(8,47,73,.5), rgba(2,6,23,.95)); }
+.generated-visual img { @apply h-full w-full object-cover; }
+.world-card { @apply flex flex-col gap-3 rounded-xl border border-cyan-400/15 bg-black/25 p-3 md:flex-row md:items-center md:justify-between; }
+.world-card-active { border-color: rgba(103,232,249,.65); box-shadow: inset 0 0 20px rgba(34,211,238,.1); }
+.world-card h3 { @apply text-sm font-black uppercase tracking-[0.16em] text-cyan-100; }
+.world-card p { @apply mt-1 text-xs text-slate-400; }
+.morph-card { @apply rounded-xl border border-cyan-400/15 bg-black/25 p-3; }
+.morph-card h3 { @apply text-sm font-black uppercase tracking-[0.16em] text-cyan-100; }
+.morph-card p { @apply mt-1 text-xs uppercase tracking-[0.14em] text-slate-500; }
+.morph-card span { @apply mt-2 mr-2 inline-block rounded-full border border-cyan-300/20 px-2 py-1 text-[10px] text-cyan-100; }
+.nutrient-flow { @apply grid gap-2 text-sm; }
+.nutrient-flow div:not(.flow-arrow) { @apply rounded-xl border border-white/10 bg-black/25 p-3; }
+.nutrient-flow strong { @apply block text-xs uppercase tracking-[0.18em] text-cyan-200; }
+.nutrient-flow span { @apply mt-1 block text-slate-400; }
+.flow-arrow { @apply text-center text-xs uppercase tracking-[0.2em] text-amber-300; }
+.morph-detail { @apply rounded-xl border border-white/10 bg-black/25 p-3; }
+.morph-detail span { @apply block text-xs font-black uppercase tracking-[0.18em] text-slate-500; }
+.morph-detail p { @apply mt-2 text-sm leading-relaxed text-cyan-50/80; }
+.timeline-item, .archive-item { @apply rounded-xl border border-white/10 bg-black/25 p-3; }
+.timeline-item span, .archive-item span { @apply block text-[10px] font-black uppercase tracking-[0.2em] text-slate-500; }
+.timeline-item strong { @apply mt-1 block text-sm uppercase tracking-[0.14em] text-purple-200; }
+.timeline-item p, .archive-item p { @apply mt-2 text-sm leading-relaxed text-cyan-50/80; }
 
 @keyframes marker-consume { 0% { transform: scale(1); opacity: 1; } 60% { transform: scale(1.35); opacity: .85; } 100% { transform: scale(.72); opacity: .45; } }
 @keyframes marker-build { from { transform: translateY(12px) scale(.6); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
