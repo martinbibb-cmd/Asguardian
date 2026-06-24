@@ -58,8 +58,8 @@ body::after {
 .glow-red { text-shadow: 0 0 14px rgba(239,68,68,.78); }
 .glow-purple { text-shadow: 0 0 16px rgba(168,85,247,.72); }
 
-.cinematic-shell { position: relative; overflow-x: hidden; }
-.panel { @apply rounded-2xl border bg-slate-950/55 backdrop-blur-md shadow-2xl; border-color: rgba(34,211,238,.18); box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 0 35px rgba(8,145,178,.08); }
+.cinematic-shell { position: relative; overflow-x: hidden; max-width: 1780px; margin: 0 auto; }
+.panel { @apply rounded-lg border bg-slate-950/70 backdrop-blur-md shadow-2xl; border-color: rgba(34,211,238,.2); box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 0 26px rgba(8,145,178,.09); }
 .panel-title { @apply text-xs font-bold uppercase tracking-[0.24em] pb-2 mb-3 border-b; border-color: rgba(34,211,238,.18); }
 .btn-action { @apply relative overflow-hidden rounded-xl border px-4 py-2.5 text-sm font-bold uppercase tracking-wider transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-40; border-color: rgba(34,211,238,.28); background: linear-gradient(135deg, rgba(14,116,144,.35), rgba(15,23,42,.75)); }
 .btn-action:hover:not(:disabled) { transform: translateY(-1px); border-color: rgba(103,232,249,.75); box-shadow: 0 0 22px rgba(34,211,238,.18); }
@@ -118,16 +118,28 @@ body::after {
 .map-action-cool .hive-core { box-shadow: 0 0 42px rgba(56,189,248,.45); }
 .low-reading-mode .panel { font-size: 1.05rem; }
 .low-reading-mode .action-tile { min-height: 96px; }
-.screen-tabs { @apply flex gap-2 overflow-x-auto rounded-2xl border border-cyan-500/15 bg-slate-950/55 p-2; }
-.screen-tabs button { @apply rounded-xl border border-transparent px-3 py-2 text-xs font-black uppercase tracking-[0.18em] text-slate-400 transition; }
-.screen-tabs button:hover, .screen-tab-active { border-color: rgba(103,232,249,.55) !important; color: rgb(207,250,254) !important; background: rgba(8,47,73,.35); }
-.generated-visual { @apply flex min-h-56 items-center justify-center overflow-hidden rounded-xl border border-cyan-400/20 bg-slate-950 text-xs font-black uppercase tracking-[0.22em] text-cyan-100; background-image: radial-gradient(circle at 35% 30%, rgba(34,211,238,.3), transparent 28%), radial-gradient(circle at 70% 70%, rgba(34,197,94,.18), transparent 24%), linear-gradient(135deg, rgba(8,47,73,.5), rgba(2,6,23,.95)); }
+.screen-tabs { @apply flex gap-1 overflow-x-auto rounded-lg border border-cyan-500/20 bg-black/45 p-1; box-shadow: inset 0 0 28px rgba(34,211,238,.08); }
+.screen-tabs button { @apply flex min-w-fit items-center gap-2 rounded-md border border-transparent px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-slate-400 transition; }
+.screen-tabs button span { @apply rounded-full border border-cyan-300/20 px-1.5 py-0.5 text-[9px] text-cyan-200/70; }
+.screen-tabs button:hover, .screen-tab-active { border-color: rgba(103,232,249,.62) !important; color: rgb(207,250,254) !important; background: linear-gradient(180deg, rgba(14,116,144,.42), rgba(15,23,42,.72)); box-shadow: inset 0 0 18px rgba(56,189,248,.18), 0 0 18px rgba(34,211,238,.12); }
+.planet-brief { @apply flex flex-col gap-3 md:flex-row md:items-center md:justify-between; }
+.planet-stat-grid { @apply grid grid-cols-2 gap-2 sm:grid-cols-4; }
+.planet-stat-grid div { @apply rounded-md border border-white/10 bg-black/30 px-3 py-2; }
+.planet-stat-grid span { @apply block text-[10px] uppercase tracking-[0.18em] text-slate-500; }
+.planet-stat-grid strong { @apply mt-1 block text-sm text-cyan-100; }
+.generated-visual { @apply relative flex min-h-[360px] items-center justify-center overflow-hidden rounded-lg border border-cyan-400/20 bg-slate-950 text-xs font-black uppercase tracking-[0.22em] text-cyan-100; background-image: radial-gradient(circle at 30% 30%, rgba(148,163,184,.24), transparent 22%), radial-gradient(circle at 44% 48%, rgba(34,197,94,.22), transparent 30%), radial-gradient(circle at 64% 55%, rgba(34,211,238,.18), transparent 24%), linear-gradient(135deg, rgba(2,6,23,.2), rgba(2,6,23,.98)); }
+.generated-visual::before { content: ''; position: absolute; inset: 0; background-image: linear-gradient(30deg, rgba(103,232,249,.12) 1px, transparent 1px), linear-gradient(150deg, rgba(103,232,249,.1) 1px, transparent 1px); background-size: 38px 66px; opacity: .34; mask-image: radial-gradient(circle at center, black 42%, transparent 74%); }
+.generated-visual::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 42% 48%, transparent 0 36%, rgba(2,6,23,.1) 37%, rgba(2,6,23,.94) 68%); pointer-events: none; }
+.generated-planet-orb { @apply relative flex h-72 w-72 items-center justify-center rounded-full border border-cyan-200/20 text-center; background: radial-gradient(circle at 35% 28%, rgba(226,232,240,.68), rgba(34,197,94,.36) 25%, rgba(15,23,42,.9) 62%, rgba(0,0,0,.96)); box-shadow: inset -38px -26px 46px rgba(0,0,0,.78), 0 0 80px rgba(34,211,238,.2); }
+.generated-planet-orb span { @apply relative z-10 rounded-md border border-cyan-300/20 bg-black/45 px-3 py-2 text-cyan-50; }
 .generated-visual img { @apply h-full w-full object-cover; }
 .world-card { @apply flex flex-col gap-3 rounded-xl border border-cyan-400/15 bg-black/25 p-3 md:flex-row md:items-center md:justify-between; }
 .world-card-active { border-color: rgba(103,232,249,.65); box-shadow: inset 0 0 20px rgba(34,211,238,.1); }
 .world-card h3 { @apply text-sm font-black uppercase tracking-[0.16em] text-cyan-100; }
 .world-card p { @apply mt-1 text-xs text-slate-400; }
 .morph-card { @apply rounded-xl border border-cyan-400/15 bg-black/25 p-3; }
+.morph-card-visual { @apply overflow-hidden; }
+.morph-image-fallback { @apply mb-3 flex h-24 items-center justify-center rounded-lg border border-cyan-300/15 text-lg font-black text-cyan-100; background: radial-gradient(circle at 35% 30%, rgba(34,197,94,.25), transparent 32%), radial-gradient(circle at 72% 68%, rgba(168,85,247,.22), transparent 30%), rgba(2,6,23,.8); }
 .morph-card h3 { @apply text-sm font-black uppercase tracking-[0.16em] text-cyan-100; }
 .morph-card p { @apply mt-1 text-xs uppercase tracking-[0.14em] text-slate-500; }
 .morph-card span { @apply mt-2 mr-2 inline-block rounded-full border border-cyan-300/20 px-2 py-1 text-[10px] text-cyan-100; }

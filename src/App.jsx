@@ -439,15 +439,54 @@ const DilemmaModal = ({ dilemma, gameState, onChoose }) => dilemma ? <div classN
 
 const AscensionModal = ({ open, gameState, onLaunch, onClose }) => open && gameState.unlocked.interstellarSeeding ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"><div className="modal-card max-w-2xl rounded-3xl border-2 border-purple-400/70 bg-slate-950/95 p-6 shadow-[0_0_80px_rgba(168,85,247,.28)] md:p-8"><div className="text-xs uppercase tracking-[0.4em] text-purple-300">Ascension Protocol</div><h2 className="mt-2 text-3xl font-black text-purple-200 glow-purple">Launch Seed Intelligence</h2><p className="mt-4 text-sm text-cyan-50/80">Deploy a portion of this hive to seed a new world. Cost: 1000 Biomass | 500 Minerals | 200 Energy | 300 Data</p><div className="mt-6 space-y-3">{['Proxima VII', 'Kepler-442b', 'Trappist-1e'].map(world => <button key={world} onClick={() => onLaunch(world)} disabled={gameState.biomass < 1000 || gameState.minerals < 500 || gameState.energy < 200 || gameState.data < 300} className="btn-action w-full border-purple-400/40 text-left"><span className="block text-purple-100">{world}</span><span className="block text-xs font-normal text-cyan-100/60">Dead world. Trace organics. Viable target.</span></button>)}</div><button onClick={onClose} className="btn-action mt-6 w-full border-slate-500/30">Cancel</button></div></div> : null;
 
-const SCREEN_TABS = ['planet', 'hive', 'morphs', 'evolution', 'archive', 'conversation', 'worlds'];
+const SCREEN_TABS = [
+  { id: 'planet', icon: 'GLB', label: 'Planet' },
+  { id: 'hive', icon: 'NET', label: 'Hive' },
+  { id: 'morphs', icon: 'BIO', label: 'Morphs' },
+  { id: 'evolution', icon: 'EVO', label: 'Evolution' },
+  { id: 'archive', icon: 'LOG', label: 'Archive' },
+  { id: 'conversation', icon: 'COM', label: 'Conversation' },
+  { id: 'worlds', icon: 'SYS', label: 'Worlds' },
+];
 
 const GeneratedVisual = ({ image, label, onRegenerate }) => (
   <section className="panel p-4">
     <div className="generated-visual">
-      {image?.url ? <img src={image.url} alt={label} /> : <span>{label}</span>}
+      {image?.url ? <img src={image.url} alt={label} /> : <div className="generated-planet-orb"><span>{label}</span></div>}
     </div>
     <p className="mt-3 text-xs leading-relaxed text-slate-400">{image?.prompt || 'Generated prompt pending.'}</p>
     <button type="button" onClick={onRegenerate} className="btn-action mt-3 w-full py-2 text-xs">Regenerate Image</button>
+  </section>
+);
+
+const PlanetBrief = ({ world, gameState, totalHeat }) => (
+  <section className="panel planet-brief p-4">
+    <div>
+      <p className="text-xs uppercase tracking-[0.24em] text-cyan-300">{world?.name || 'Local World'}</p>
+      <h2 className="mt-1 text-lg font-black uppercase tracking-[0.18em] text-cyan-50">Dead World - Becoming</h2>
+    </div>
+    <div className="planet-stat-grid">
+      <div><span>Cycle</span><strong>{gameState.cycle}</strong></div>
+      <div><span>Thermal</span><strong>{totalHeat}%</strong></div>
+      <div><span>Atmosphere</span><strong>{Math.floor(gameState.systemViability.atmosphere)}%</strong></div>
+      <div><span>Biomass</span><strong>{gameState.biomass}u</strong></div>
+    </div>
+  </section>
+);
+
+const RecentMorphs = ({ world }) => (
+  <section className="panel p-4">
+    <h2 className="panel-title text-cyan-300">Recent Morphs</h2>
+    <div className="grid gap-3 sm:grid-cols-2">
+      {(world?.knownMorphs || []).slice(0, 4).map(morph => (
+        <article key={morph.id} className="morph-card morph-card-visual">
+          <div className="morph-image-fallback">{morph.name.slice(0, 2).toUpperCase()}</div>
+          <h3>{morph.name}</h3>
+          <p>{morph.role}</p>
+          <div>{morph.traits.slice(0, 3).map(trait => <span key={trait}>{trait}</span>)}</div>
+        </article>
+      ))}
+    </div>
   </section>
 );
 
@@ -496,7 +535,7 @@ const Dashboard = () => {
   const [playstyle] = useState(() => localStorage.getItem('asguardianPlaystyle') || 'conservative');
   const [worlds, setWorlds] = useState([]);
   const [currentWorld, setCurrentWorld] = useState(null);
-  const [activeScreen, setActiveScreen] = useState('worlds');
+  const [activeScreen, setActiveScreen] = useState('planet');
   const [selectedMorphId, setSelectedMorphId] = useState(null);
   const [pendingVoiceAction, setPendingVoiceAction] = useState(null);
   const [lastTranscript, setLastTranscript] = useState('');
@@ -536,6 +575,20 @@ const Dashboard = () => {
       setWorlds(stored);
       const activeId = await getActiveWorldId();
       const activeWorld = activeId ? await getWorld(activeId) : stored[0];
+      if (!activeWorld && !stored.length) {
+        const seeded = await saveWorld(ensureWorldImages(createInitialWorld({ name: 'Ylthera IV', environmentState: createInitialState(), mapState: INITIAL_MAP_STATE })));
+        await setActiveWorldId(seeded.id);
+        if (cancelled) return;
+        setWorlds([seeded]);
+        setCurrentWorld(seeded);
+        setGameState(seeded.environmentState);
+        setMapState(seeded.mapState || INITIAL_MAP_STATE);
+        setSystemLog([{ text: '[SYSTEM]: Ylthera IV seeded. Dead world entering viability survey.', type: 'system' }]);
+        setSelectedMorphId(seeded.knownMorphs?.[0]?.id || null);
+        setActiveScreen('planet');
+        setGameStarted(true);
+        return;
+      }
       if (!activeWorld || cancelled) return;
       const hydrated = ensureWorldImages(activeWorld);
       setCurrentWorld(hydrated);
@@ -677,7 +730,7 @@ const Dashboard = () => {
   const handlers = { advanceCycle, rotatePods: handlePodRotation, showHive: () => setSystemLog(prev => [...prev, { text: generateHiveSchematic(gameState), type: 'schematic' }]), showReport: () => setSystemLog(prev => [...prev, { text: generateSystemReport(gameState), type: 'schematic' }]), updatePolicy: (key, value) => setGameState(updatePolicy(gameState, key, value)), transition: handlePhaseTransition, showAscension: () => setShowAscensionPanel(true), addUnit: handleAddUnit, newGame: () => setShowNewGameConfirm(true) };
   const voiceSupported = typeof window !== 'undefined' && Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
   const toggleLowReading = () => { const next = !lowReading; setLowReading(next); localStorage.setItem('asguardianLowReading', String(next)); };
-  const planetScreen = <div className="space-y-4">{currentWorld && <GeneratedVisual image={currentWorld.generatedImages?.planet} label={currentWorld.name} onRegenerate={() => regenerateImage('planet')} />}<HiveCoreVisual gameState={gameState} totalHeat={totalHeat} heatStatus={heatStatus} phasePulse={phasePulse} mapState={mapState} /><SystemLog systemLog={systemLog} logEndRef={logEndRef} command={command} setCommand={setCommand} sendCommand={sendCommand} isTyping={isTyping} gameStarted={gameStarted} handleKeyPress={handleKeyPress} lowReading={lowReading} onToggleLowReading={toggleLowReading} nextBestActions={nextBestActions} /></div>;
+  const planetScreen = <div className="space-y-4"><PlanetBrief world={currentWorld} gameState={gameState} totalHeat={totalHeat} />{currentWorld && <GeneratedVisual image={currentWorld.generatedImages?.planet} label={currentWorld.name} onRegenerate={() => regenerateImage('planet')} />}<HiveCoreVisual gameState={gameState} totalHeat={totalHeat} heatStatus={heatStatus} phasePulse={phasePulse} mapState={mapState} /><RecentMorphs world={currentWorld} /><SystemLog systemLog={systemLog} logEndRef={logEndRef} command={command} setCommand={setCommand} sendCommand={sendCommand} isTyping={isTyping} gameStarted={gameStarted} handleKeyPress={handleKeyPress} lowReading={lowReading} onToggleLowReading={toggleLowReading} nextBestActions={nextBestActions} /></div>;
   const conversationScreen = <div className="space-y-4"><section className="panel p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-sm font-black uppercase tracking-[0.2em] text-cyan-100">Seed Conversation</h2><p className="mt-1 text-xs text-slate-400">Speak naturally. Destructive interpreted actions require confirmation.</p></div><button type="button" onClick={startVoiceCommand} disabled={!voiceSupported || listening || isTyping} className="btn-action">{listening ? 'Listening' : 'Push To Talk'}</button></div>{lastTranscript && <p className="mt-3 rounded-xl border border-white/10 bg-black/25 p-3 text-sm text-slate-300">Heard: {lastTranscript}</p>}{pendingVoiceAction && <div className="mt-3 rounded-xl border border-amber-300/40 bg-amber-950/20 p-3"><p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-200">Confirm destructive action</p><p className="mt-1 text-sm text-cyan-100">{pendingVoiceAction.label}: {pendingVoiceAction.command}</p><div className="mt-3 flex gap-2"><button type="button" onClick={() => applyVoiceIntent(pendingVoiceAction)} className="btn-action border-amber-300/40 py-2 text-xs">Apply</button><button type="button" onClick={() => setPendingVoiceAction(null)} className="btn-action py-2 text-xs">Cancel</button></div></div>}{!voiceSupported && <p className="mt-3 text-xs text-slate-500">Speech recognition is unavailable in this browser.</p>}</section><SystemLog systemLog={systemLog} logEndRef={logEndRef} command={command} setCommand={setCommand} sendCommand={sendCommand} isTyping={isTyping} gameStarted={gameStarted} handleKeyPress={handleKeyPress} lowReading={lowReading} onToggleLowReading={toggleLowReading} nextBestActions={nextBestActions} /></div>;
   const screenContent = {
     planet: planetScreen,
@@ -689,7 +742,7 @@ const Dashboard = () => {
     worlds: <WorldsScreen worlds={worlds} currentWorld={currentWorld} onNewWorld={createLocalWorld} onContinue={continueLocalWorld} onDuplicate={duplicateLocalWorld} onDelete={deleteLocalWorld} onExport={exportLocalWorld} onImport={importLocalWorld} />,
   }[activeScreen] || planetScreen;
 
-  return <div className="cinematic-shell scanline min-h-screen p-3 md:p-6"><ResourceBar gameState={gameState} totalHeat={totalHeat} heatStatus={heatStatus} muted={muted} onToggleMute={() => { const next = !muted; setMuted(next); localStorage.setItem('asguardianMuted', String(next)); }} /><nav className="screen-tabs mt-4">{SCREEN_TABS.map(tab => <button key={tab} type="button" onClick={() => setActiveScreen(tab)} className={activeScreen === tab ? 'screen-tab-active' : ''}>{tab}</button>)}</nav><main className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-12"><div className="xl:col-span-4"><PodStatusPanel gameState={gameState} activeUnits={activeUnits} metaState={metaState} /></div><div className="space-y-4 xl:col-span-5">{screenContent}</div><div className="xl:col-span-3"><OperationsPanel gameState={gameState} gameStarted={gameStarted} handlers={handlers} /></div></main><DilemmaModal dilemma={currentDilemma} gameState={gameState} onChoose={handleDilemmaChoice} /><AscensionModal open={showAscensionPanel} gameState={gameState} onLaunch={handleLaunchSeed} onClose={() => setShowAscensionPanel(false)} />{showNewGameConfirm && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"><div className="modal-card max-w-md rounded-3xl border-2 border-red-500/70 bg-slate-950 p-6"><h2 className="text-xl font-black text-red-300 glow-red">Abandon Current Deployment?</h2><p className="mt-4 text-sm text-cyan-100/80">All progress will be lost. The hive will be terminated. A new seed will be deployed.</p><div className="mt-6 flex gap-3"><button onClick={handleNewGame} className="btn-action flex-1 border-red-400/50 text-red-100">Terminate</button><button onClick={() => setShowNewGameConfirm(false)} className="btn-action flex-1">Cancel</button></div></div></div>}<footer className="mt-8 text-center text-xs italic tracking-widest text-slate-600">"If intelligence can design life, is restraint a feature - or a bug?"</footer></div>;
+  return <div className="cinematic-shell scanline min-h-screen p-3 md:p-6"><ResourceBar gameState={gameState} totalHeat={totalHeat} heatStatus={heatStatus} muted={muted} onToggleMute={() => { const next = !muted; setMuted(next); localStorage.setItem('asguardianMuted', String(next)); }} /><nav className="screen-tabs mt-4">{SCREEN_TABS.map(tab => <button key={tab.id} type="button" onClick={() => setActiveScreen(tab.id)} className={activeScreen === tab.id ? 'screen-tab-active' : ''}><span>{tab.icon}</span>{tab.label}</button>)}</nav><main className="dashboard-grid mt-4 grid grid-cols-1 gap-4 xl:grid-cols-12"><div className="space-y-4 xl:order-2 xl:col-span-6">{screenContent}</div><div className="xl:order-1 xl:col-span-3"><PodStatusPanel gameState={gameState} activeUnits={activeUnits} metaState={metaState} /></div><div className="xl:order-3 xl:col-span-3"><OperationsPanel gameState={gameState} gameStarted={gameStarted} handlers={handlers} /></div></main><DilemmaModal dilemma={currentDilemma} gameState={gameState} onChoose={handleDilemmaChoice} /><AscensionModal open={showAscensionPanel} gameState={gameState} onLaunch={handleLaunchSeed} onClose={() => setShowAscensionPanel(false)} />{showNewGameConfirm && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"><div className="modal-card max-w-md rounded-3xl border-2 border-red-500/70 bg-slate-950 p-6"><h2 className="text-xl font-black text-red-300 glow-red">Abandon Current Deployment?</h2><p className="mt-4 text-sm text-cyan-100/80">All progress will be lost. The hive will be terminated. A new seed will be deployed.</p><div className="mt-6 flex gap-3"><button onClick={handleNewGame} className="btn-action flex-1 border-red-400/50 text-red-100">Terminate</button><button onClick={() => setShowNewGameConfirm(false)} className="btn-action flex-1">Cancel</button></div></div></div>}<footer className="mt-8 text-center text-xs italic tracking-widest text-slate-600">"If intelligence can design life, is restraint a feature - or a bug?"</footer></div>;
 };
 
 export default Dashboard;
