@@ -166,6 +166,37 @@ test('POST /api with message calls gateway and returns gateway json text', async
   }
 });
 
+test('POST /api debug mode reports gateway parsing without secrets', async () => {
+  const originalFetch = globalThis.fetch;
+  const longRaw = `{"response":"${'x'.repeat(700)}"}`;
+  globalThis.fetch = async () => Response.json({
+    model: 'llama3.2:3b',
+    json: { response: 'LOCAL LLM ONLINE. Debug parser confirmed.' },
+    raw: longRaw,
+  });
+
+  try {
+    const response = await postCommand(gatewayEnv, {
+      message: 'Say LOCAL LLM ONLINE in character.',
+      debug: true,
+    });
+    const body = await response.json();
+    const serialized = JSON.stringify(body);
+
+    assert.equal(response.status, 200);
+    assert.equal(body.debug, true);
+    assert.equal(body.usedGateway, true);
+    assert.equal(body.gatewayStatus, 200);
+    assert.deepEqual(body.gatewayResponseKeys, ['model', 'json', 'raw']);
+    assert.equal(body.parsedText, 'LOCAL LLM ONLINE. Debug parser confirmed.');
+    assert.equal(body.fallbackUsed, false);
+    assert.equal(body.rawPreview.length, 500);
+    assert.equal(serialized.includes(gatewayEnv.DAEDALUS_LLM_API_KEY), false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('POST /api with prompt calls gateway and returns gateway raw text', async () => {
   const originalFetch = globalThis.fetch;
   let requestBody;

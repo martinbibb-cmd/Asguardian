@@ -43,6 +43,7 @@ export default {
           hasContext: Boolean(body?.context && typeof body.context === 'object'),
         });
         const { message, context } = normaliseCommandBody(body);
+        const debug = body?.debug === true;
 
         if (!message) {
           console.warn('Asguardian command rejected: missing message or prompt');
@@ -50,7 +51,7 @@ export default {
         }
 
         // Call Daedalus LLM Gateway
-        const gatewayResponse = await callDaedalusGateway(message, context, env);
+        const gatewayResponse = await callDaedalusGateway(message, context, env, { debug });
 
         return jsonResponse(gatewayResponse);
       } catch (error) {
@@ -69,7 +70,7 @@ export default {
 /**
  * Call Daedalus LLM Gateway with comprehensive Seed Intelligence context.
  */
-async function callDaedalusGateway(message, context, env) {
+async function callDaedalusGateway(message, context, env, options = {}) {
   const gatewayBaseUrl = trimTrailingSlash(env.DAEDALUS_LLM_BASE_URL || '');
   const gatewayApiKey = env.DAEDALUS_LLM_API_KEY;
   const gatewayModel = env.DAEDALUS_LLM_MODEL;
@@ -276,7 +277,8 @@ ALWAYS:
   }
 
   const responseData = await response.json();
-  console.log('Daedalus LLM Gateway response shape:', describeGatewayResponseShape(responseData));
+  const gatewayResponseShape = describeGatewayResponseShape(responseData);
+  console.log('Daedalus LLM Gateway response shape:', gatewayResponseShape);
   const aiResponse = extractGatewayText(responseData);
   console.log('Daedalus LLM Gateway extracted text:', {
     found: Boolean(aiResponse),
@@ -285,6 +287,19 @@ ALWAYS:
 
   if (!aiResponse) {
     throw new Error('Daedalus LLM Gateway returned no extractable response text');
+  }
+
+  if (options.debug === true) {
+    return {
+      debug: true,
+      usedGateway: true,
+      gatewayStatus: response.status,
+      gatewayResponseKeys: gatewayResponseShape.keys,
+      gatewayResponseShape,
+      parsedText: aiResponse.slice(0, 500),
+      rawPreview: buildRawPreview(responseData),
+      fallbackUsed: false,
+    };
   }
 
   // Analyze command and suggest state changes
@@ -541,4 +556,12 @@ function describeGatewayResponseShape(responseData) {
     hasChoices: Array.isArray(responseData.choices),
     dataKeys: responseData.data && typeof responseData.data === 'object' ? Object.keys(responseData.data) : [],
   };
+}
+
+function buildRawPreview(responseData) {
+  const rawText = typeof responseData?.raw === 'string'
+    ? responseData.raw
+    : JSON.stringify(responseData);
+
+  return rawText.slice(0, 500);
 }
