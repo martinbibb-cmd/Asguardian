@@ -9,9 +9,15 @@
 
 export default {
   async fetch(request, env) {
+    const url = new URL(request.url);
+
     // Handle CORS preflight
     if (request.method === 'OPTIONS') {
       return handleCORS();
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/llm-health') {
+      return handleLlmHealth(env);
     }
 
     // Handle GET request (health check)
@@ -71,6 +77,10 @@ async function callDaedalusGateway(message, context, env) {
   if (!gatewayModel) {
     throw new Error('DAEDALUS_LLM_MODEL not configured');
   }
+
+  console.log('Using Daedalus LLM Gateway');
+  console.log('Selected Daedalus LLM model:', gatewayModel);
+  console.log('Daedalus LLM Gateway URL:', gatewayBaseUrl);
 
   // Extract context with defaults
   const phase = context?.phase || 'mechanical';
@@ -348,6 +358,58 @@ function jsonResponse(data, status = 200) {
     status,
     headers: corsHeaders()
   });
+}
+
+async function handleLlmHealth(env) {
+  const gatewayBaseUrl = trimTrailingSlash(env.DAEDALUS_LLM_BASE_URL || '');
+  const gatewayApiKey = env.DAEDALUS_LLM_API_KEY;
+  const gatewayModel = env.DAEDALUS_LLM_MODEL;
+  const missing = getMissingDaedalusConfig({ gatewayBaseUrl, gatewayApiKey, gatewayModel });
+
+  if (missing.length > 0) {
+    return jsonResponse({
+      ok: false,
+      configured: false,
+      missing,
+    });
+  }
+
+  try {
+    const response = await fetch(`${gatewayBaseUrl}/v1/self-test`, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        'x-daedalus-api-key': gatewayApiKey,
+      },
+    });
+
+    return jsonResponse({
+      ok: response.ok,
+      configured: true,
+      baseUrl: gatewayBaseUrl,
+      model: gatewayModel,
+      gatewayReachable: response.ok,
+      gatewaySelfTest: response.ok,
+    });
+  } catch (error) {
+    console.error('Daedalus LLM Gateway health check failed:', error.message);
+    return jsonResponse({
+      ok: false,
+      configured: true,
+      baseUrl: gatewayBaseUrl,
+      model: gatewayModel,
+      gatewayReachable: false,
+      gatewaySelfTest: false,
+    });
+  }
+}
+
+function getMissingDaedalusConfig({ gatewayBaseUrl, gatewayApiKey, gatewayModel }) {
+  const missing = [];
+  if (!gatewayBaseUrl) missing.push('DAEDALUS_LLM_BASE_URL');
+  if (!gatewayApiKey) missing.push('DAEDALUS_LLM_API_KEY');
+  if (!gatewayModel) missing.push('DAEDALUS_LLM_MODEL');
+  return missing;
 }
 
 function trimTrailingSlash(value) {

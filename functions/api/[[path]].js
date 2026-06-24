@@ -1,4 +1,4 @@
-import worker from '../worker/index.js';
+import worker from '../../worker/index.js';
 
 export async function onRequest(context) {
   return worker.fetch(context.request, context.env);
