@@ -45,6 +45,75 @@ const QUICK_ACTIONS = [
   { id: 'reflect', label: 'Reflect', icon: 'LORE', command: 'what are we becoming?', tone: 'Optional philosophical log.', color: 'rose' }
 ];
 
+const INITIAL_MAP_STATE = {
+  revealed: ['core'],
+  minerals: ['north'],
+  organics: ['east'],
+  pods: ['core'],
+  lastAction: null,
+  pulse: 0,
+};
+
+const MAP_SECTORS = [
+  { id: 'core', label: 'CORE', x: 50, y: 50 },
+  { id: 'north', label: 'NORTH', x: 34, y: 27 },
+  { id: 'east', label: 'EAST', x: 72, y: 42 },
+  { id: 'south', label: 'SOUTH', x: 45, y: 73 },
+  { id: 'west', label: 'WEST', x: 22, y: 54 },
+  { id: 'rim', label: 'RIM', x: 67, y: 72 },
+];
+
+const classifyDirective = (text = '') => {
+  const lower = text.toLowerCase();
+  if (lower.includes('scout') || lower.includes('explore') || lower.includes('survey') || lower.includes('scan')) return 'explore';
+  if (lower.includes('harvest') || lower.includes('mine') || lower.includes('gather') || lower.includes('organics')) return 'harvest';
+  if (lower.includes('build') || lower.includes('expand') || lower.includes('grow') || lower.includes('construct')) return 'build';
+  if (lower.includes('cool') || lower.includes('thermal') || lower.includes('rotate')) return 'cool';
+  if (lower.includes('status')) return 'status';
+  if (lower.includes('becoming') || lower.includes('reflect') || lower.includes('moral') || lower.includes('right')) return 'reflect';
+  return 'status';
+};
+
+const getNextBestActions = (gameState, mapState, heatStatus) => {
+  if (heatStatus !== 'STABLE') return ['cool', 'status'];
+  if (mapState.revealed.length < MAP_SECTORS.length) return ['explore', 'status'];
+  if (mapState.minerals.length || mapState.organics.length) return ['harvest', 'build'];
+  if (gameState.biomass > 120 && gameState.minerals > 80) return ['build', 'explore'];
+  return ['explore', 'harvest'];
+};
+
+const advanceMapState = (mapState, action) => {
+  const next = {
+    ...mapState,
+    revealed: [...mapState.revealed],
+    minerals: [...mapState.minerals],
+    organics: [...mapState.organics],
+    pods: [...mapState.pods],
+    lastAction: action,
+    pulse: mapState.pulse + 1,
+  };
+
+  if (action === 'explore') {
+    const hidden = MAP_SECTORS.map(sector => sector.id).filter(id => !next.revealed.includes(id));
+    const revealed = hidden[0];
+    if (revealed) next.revealed.push(revealed);
+    if (revealed && !next.minerals.includes(revealed) && next.minerals.length < 3) next.minerals.push(revealed);
+    if (revealed && !next.organics.includes(revealed) && next.organics.length < 3) next.organics.push(revealed);
+  }
+
+  if (action === 'harvest') {
+    next.minerals = next.minerals.slice(1);
+    next.organics = next.organics.slice(1);
+  }
+
+  if (action === 'build') {
+    const target = next.revealed.find(id => !next.pods.includes(id)) || 'core';
+    if (!next.pods.includes(target)) next.pods.push(target);
+  }
+
+  return next;
+};
+
 const compactText = (text = '', maxLength = 96) => {
   const cleaned = text.replace(/\s+/g, ' ').replace(/^\[[^\]]+\]:\s*/, '').trim();
   if (cleaned.length <= maxLength) return cleaned;
@@ -134,20 +203,34 @@ const ResourceBar = ({ gameState, totalHeat, heatStatus, muted, onToggleMute }) 
   );
 };
 
-const HiveCoreVisual = ({ gameState, totalHeat, heatStatus, phasePulse }) => {
+const HiveCoreVisual = ({ gameState, totalHeat, heatStatus, phasePulse, mapState }) => {
   const activeUnits = gameState.units.filter(unit => unit.active);
   const controlRatio = Math.min(100, Math.round((gameState.territory.controlled / Math.max(gameState.territory.mapped, 1)) * 100));
   const nodes = activeUnits.slice(0, 10);
+  const lastActionClass = mapState.lastAction ? `map-action-${mapState.lastAction}` : '';
   return (
-    <section className={`panel core-visual phase-${gameState.phase} relative min-h-[360px] overflow-hidden p-4 md:min-h-[520px]`}>
+    <section className={`panel core-visual phase-${gameState.phase} ${lastActionClass} relative min-h-[360px] overflow-hidden p-4 md:min-h-[520px]`} data-pulse={mapState.pulse}>
       {phasePulse && <div className="phase-transition-flash" />}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(14,116,144,.2),transparent_35%),radial-gradient(circle_at_70%_35%,rgba(168,85,247,.18),transparent_28%)]" />
       <div className="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-br from-slate-700 via-slate-950 to-black shadow-[inset_-25px_-25px_50px_rgba(0,0,0,.8),0_0_90px_rgba(34,211,238,.16)] md:h-80 md:w-80" />
       <div className="territory-ping absolute left-1/2 top-1/2 h-40 w-40 rounded-full border border-cyan-300/25" />
       <div className="territory-ping absolute left-1/2 top-1/2 h-56 w-56 rounded-full border border-purple-300/20 [animation-delay:1s]" />
-      <div className="map-marker left-[24%] top-[32%] border-amber-300/70 text-amber-200">MIN</div>
-      <div className="map-marker right-[22%] top-[42%] border-green-300/60 text-green-200">ORG</div>
-      <div className="map-marker bottom-[28%] left-[36%] border-cyan-300/60 text-cyan-200">POD</div>
+      {MAP_SECTORS.map(sector => {
+        const revealed = mapState.revealed.includes(sector.id);
+        return <div key={sector.id} className={`map-sector ${revealed ? 'map-sector-revealed' : 'map-sector-fog'}`} style={{ left: `${sector.x}%`, top: `${sector.y}%` }}>{revealed ? sector.label : ''}</div>;
+      })}
+      {mapState.minerals.map(id => {
+        const sector = MAP_SECTORS.find(item => item.id === id);
+        return sector ? <div key={`min-${id}`} className="map-marker map-marker-mineral border-amber-300/70 text-amber-200" style={{ left: `${sector.x - 5}%`, top: `${sector.y - 7}%` }}>MIN</div> : null;
+      })}
+      {mapState.organics.map(id => {
+        const sector = MAP_SECTORS.find(item => item.id === id);
+        return sector ? <div key={`org-${id}`} className="map-marker map-marker-organic border-green-300/60 text-green-200" style={{ left: `${sector.x + 3}%`, top: `${sector.y + 3}%` }}>ORG</div> : null;
+      })}
+      {mapState.pods.map(id => {
+        const sector = MAP_SECTORS.find(item => item.id === id);
+        return sector ? <div key={`pod-${id}`} className="map-marker map-marker-pod border-cyan-300/60 text-cyan-200" style={{ left: `${sector.x - 2}%`, top: `${sector.y + 7}%` }}>POD</div> : null;
+      })}
       <div className="map-scan absolute left-[12%] top-[18%] h-[64%] w-[76%] rounded-full border border-cyan-300/10" />
       {[170, 230, 292].map((size, index) => (
         <div key={size} className="orbit-ring absolute left-1/2 top-1/2 rounded-full border border-cyan-300/15" style={{ width: size, height: size, marginLeft: -size / 2, marginTop: -size / 2, '--orbit-speed': `${18 + index * 9}s` }}>
@@ -184,35 +267,39 @@ const PodStatusPanel = ({ gameState, activeUnits, metaState }) => (
   </section>
 );
 
-const OutcomeCard = ({ log, expanded, onToggle }) => {
+const OutcomeCard = ({ log, expanded, onToggle, lowReading, suggestedAction }) => {
   const chips = extractImpact(log.text);
   const title = getOutcomeTitle(log);
   const preview = compactText(log.text, 112);
   const toneClass = log.type === 'error' ? 'border-red-400/40 bg-red-950/20' : log.type === 'warning' ? 'border-amber-400/40 bg-amber-950/20' : log.type === 'reflection' ? 'border-purple-400/35 bg-purple-950/20' : 'border-cyan-400/25 bg-cyan-950/15';
+  const impact = chips[0] || (log.type === 'command' ? 'Action queued' : 'State changed');
+  const showDetail = expanded && !lowReading;
 
   return (
-    <article className={`outcome-card ${toneClass}`}>
+    <article className={`outcome-card ${toneClass} ${lowReading ? 'outcome-card-low-reading' : ''}`}>
       <button type="button" onClick={onToggle} className="w-full text-left">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h3 className="text-sm font-black uppercase tracking-[0.18em] text-cyan-100">{title}</h3>
-            <p className="mt-2 text-sm leading-snug text-slate-200">{preview}</p>
+            <h3 className="text-sm font-black uppercase tracking-[0.18em] text-cyan-100">{lowReading ? title.split(' ').slice(0, 4).join(' ') : title}</h3>
+            <p className="mt-2 text-sm leading-snug text-slate-200">{lowReading ? impact : preview}</p>
           </div>
-          <span className="rounded-md border border-white/10 px-2 py-1 text-xs uppercase text-slate-400">{expanded ? 'Less' : 'More'}</span>
+          <span className="rounded-md border border-white/10 px-2 py-1 text-xs uppercase text-slate-400">{lowReading ? 'Info' : expanded ? 'Less' : 'More'}</span>
         </div>
-        {chips.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{chips.map(chip => <span key={chip} className="rounded-full border border-cyan-300/20 bg-black/30 px-2 py-1 text-xs text-cyan-100">{chip}</span>)}</div>}
+        {lowReading && <div className="mt-3 rounded-lg border border-white/10 bg-black/25 px-3 py-2 text-sm text-cyan-100">Next: {suggestedAction}</div>}
+        {!lowReading && chips.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{chips.map(chip => <span key={chip} className="rounded-full border border-cyan-300/20 bg-black/30 px-2 py-1 text-xs text-cyan-100">{chip}</span>)}</div>}
       </button>
-      {expanded && <p className="mt-3 border-t border-white/10 pt-3 text-sm leading-relaxed text-cyan-50/85">{log.text}</p>}
+      {showDetail && <p className="mt-3 border-t border-white/10 pt-3 text-sm leading-relaxed text-cyan-50/85">{log.text}</p>}
     </article>
   );
 };
 
-const SystemLog = ({ systemLog, logEndRef, command, setCommand, sendCommand, isTyping, gameStarted, handleKeyPress }) => {
+const SystemLog = ({ systemLog, logEndRef, command, setCommand, sendCommand, isTyping, gameStarted, handleKeyPress, lowReading, onToggleLowReading, nextBestActions }) => {
   const [expandedId, setExpandedId] = useState(null);
-  const [voiceEnabled, setVoiceEnabled] = useState(() => localStorage.getItem('asguardianVoice') === 'true');
-  const visibleLogs = systemLog.filter(log => log.text && log.type !== 'log').slice(-6).reverse();
+  const [voiceEnabled, setVoiceEnabled] = useState(() => lowReading || localStorage.getItem('asguardianVoice') === 'true');
+  const visibleLogs = systemLog.filter(log => log.text && log.type !== 'log').slice(lowReading ? -3 : -6).reverse();
   const latest = visibleLogs.find(log => log.type !== 'command');
   const status = isTyping ? 'AI thinking' : gameStarted ? 'Ready' : 'Booting';
+  const suggestedAction = QUICK_ACTIONS.find(action => action.id === nextBestActions[0])?.label || 'Explore';
 
   useEffect(() => {
     if (!voiceEnabled || !latest?.text || typeof window === 'undefined' || !window.speechSynthesis) return;
@@ -230,22 +317,34 @@ const SystemLog = ({ systemLog, logEndRef, command, setCommand, sendCommand, isT
     if (!next && typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.cancel();
   };
 
+  const toggleLowReading = () => {
+    if (!lowReading && !voiceEnabled) {
+      setVoiceEnabled(true);
+      localStorage.setItem('asguardianVoice', 'true');
+    }
+    onToggleLowReading();
+  };
+
   return (
-    <section className="panel flex min-h-[420px] flex-col p-4 md:min-h-[520px]">
+    <section className={`panel flex min-h-[420px] flex-col p-4 md:min-h-[520px] ${lowReading ? 'low-reading-mode' : ''}`}>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-cyan-500/15 pb-2">
         <div>
           <h2 className="text-xs font-bold uppercase tracking-[0.32em] text-cyan-300">Command Deck</h2>
           <p className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">{status}</p>
         </div>
-        <button type="button" onClick={toggleVoice} className="btn-action py-2 text-xs" aria-pressed={voiceEnabled}>{voiceEnabled ? 'Voice On' : 'Voice Off'}</button>
+        <div className="flex gap-2">
+          <button type="button" onClick={toggleLowReading} className="btn-action py-2 text-xs" aria-pressed={lowReading}>{lowReading ? 'Low Read On' : 'Low Read'}</button>
+          <button type="button" onClick={toggleVoice} className="btn-action py-2 text-xs" aria-pressed={voiceEnabled}>{voiceEnabled ? 'Voice On' : 'Voice Off'}</button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {QUICK_ACTIONS.map(action => (
-          <button key={action.id} type="button" onClick={() => sendCommand(action.command)} disabled={isTyping || !gameStarted} className={`action-tile action-${action.color}`}>
+          <button key={action.id} type="button" onClick={() => sendCommand(action.command)} disabled={isTyping || !gameStarted} className={`action-tile action-${action.color} ${nextBestActions.includes(action.id) ? 'action-tile-suggested' : ''}`}>
             <span className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">{action.icon}</span>
             <span className="mt-1 text-base font-black text-cyan-50">{action.label}</span>
-            <span className="mt-1 text-xs leading-snug text-slate-400">{action.tone}</span>
+            {!lowReading && <span className="mt-1 text-xs leading-snug text-slate-400">{action.tone}</span>}
+            {nextBestActions.includes(action.id) && <span className="mt-2 rounded-full border border-cyan-200/25 px-2 py-0.5 text-[10px] uppercase text-cyan-100">Best next</span>}
           </button>
         ))}
       </div>
@@ -264,7 +363,7 @@ const SystemLog = ({ systemLog, logEndRef, command, setCommand, sendCommand, isT
       <div className="mt-4 flex-1 space-y-3 overflow-y-auto pr-1">
         {visibleLogs.map((log, index) => {
           const id = log.id || `${log.type}-${index}-${log.text.slice(0, 12)}`;
-          return <OutcomeCard key={id} log={log} expanded={expandedId === id} onToggle={() => setExpandedId(expandedId === id ? null : id)} />;
+          return <OutcomeCard key={id} log={log} expanded={expandedId === id} onToggle={() => setExpandedId(expandedId === id ? null : id)} lowReading={lowReading} suggestedAction={suggestedAction} />;
         })}
         <div ref={logEndRef} />
       </div>
@@ -307,6 +406,8 @@ const Dashboard = () => {
   const [showNewGameConfirm, setShowNewGameConfirm] = useState(false);
   const [muted, setMuted] = useState(() => localStorage.getItem('asguardianMuted') === 'true');
   const [phasePulse, setPhasePulse] = useState(false);
+  const [mapState, setMapState] = useState(INITIAL_MAP_STATE);
+  const [lowReading, setLowReading] = useState(() => localStorage.getItem('asguardianLowReading') === 'true');
   const logEndRef = useRef(null);
   const typewriterCleanupRef = useRef(null);
   const messageIdCounter = useRef(0);
@@ -354,6 +455,8 @@ const Dashboard = () => {
       const context = { heat: calculateTotalHeat(gameState), biomass: gameState.biomass, minerals: gameState.minerals, data: gameState.data, energy: gameState.energy, cycle: gameState.cycle, phase: gameState.phase, activeUnits: gameState.units.filter(u => u.active).length, totalUnits: gameState.units.length, heatCritical: isHeatCritical(gameState), heatElevated: isHeatElevated(gameState), unlocked: gameState.unlocked, policies: gameState.policies, nativeLifeEncountered: gameState.nativeLifeEncountered, extinctionEvents: gameState.extinctionEvents, territory: gameState.territory, ascension: gameState.ascension };
       const data = await sendApiCommand(userCommand, context);
       const responseText = data.response || 'No response received.';
+      const visualAction = data.actions?.action || classifyDirective(userCommand);
+      setMapState(prev => advanceMapState(prev, visualAction));
       typewriterCleanupRef.current = typewriterEffect(responseText, () => {
         if (data.actions) {
           let newState = { ...gameState };
@@ -375,15 +478,17 @@ const Dashboard = () => {
   const handleKeyPress = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendCommand(); } };
   const handleDilemmaChoice = choiceId => { if (!currentDilemma) return; const choice = currentDilemma.options.find(opt => opt.id === choiceId); if (!choice) return; const newState = applyDilemmaChoice(gameState, currentDilemma, choiceId); setGameState(newState); playTone(260, .18, 'triangle'); setSystemLog(prev => [...prev, { text: `[DECISION]: ${choice.label}`, type: 'command' }, { text: choice.reflection, type: 'reflection' }]); setCurrentDilemma(null); saveGame(newState); };
   const handlePhaseTransition = newPhase => { const newState = transitionPhase(gameState, newPhase); setGameState(newState); setPhasePulse(true); setTimeout(() => setPhasePulse(false), 950); playTone(660, .2, 'sawtooth'); setSystemLog(prev => [...prev, { text: `[PHASE TRANSITION]: ${gameState.phase.toUpperCase()} → ${newPhase.toUpperCase()}. We are becoming something new.`, type: 'discovery' }]); saveGame(newState); };
-  const handlePodRotation = () => { const newState = rotatePods(gameState); setGameState(newState); playTone(140, .1, 'sine'); setSystemLog(prev => [...prev, { text: '[THERMAL MANAGEMENT]: Pod rotation complete. Heat redistributed across the hive.', type: 'system' }]); saveGame(newState); };
-  const handleAddUnit = (role, type) => { const newState = addUnit(gameState, role, type); if (newState.units.length > gameState.units.length) { setGameState(newState); playTone(390, .07, 'triangle'); setSystemLog(prev => [...prev, { text: `[HIVE]: New ${type} ${role} unit deployed. The collective grows.`, type: 'system' }]); saveGame(newState); } else setSystemLog(prev => [...prev, { text: '[ERROR]: Insufficient resources for unit creation.', type: 'error' }]); };
+  const handlePodRotation = () => { const newState = rotatePods(gameState); setGameState(newState); setMapState(prev => advanceMapState(prev, 'cool')); playTone(140, .1, 'sine'); setSystemLog(prev => [...prev, { text: '[THERMAL MANAGEMENT]: Pod rotation complete. Heat redistributed across the hive.', type: 'system' }]); saveGame(newState); };
+  const handleAddUnit = (role, type) => { const newState = addUnit(gameState, role, type); if (newState.units.length > gameState.units.length) { setGameState(newState); setMapState(prev => advanceMapState(prev, 'build')); playTone(390, .07, 'triangle'); setSystemLog(prev => [...prev, { text: `[HIVE]: New ${type} ${role} unit deployed. The collective grows.`, type: 'system' }]); saveGame(newState); } else setSystemLog(prev => [...prev, { text: '[ERROR]: Insufficient resources for unit creation.', type: 'error' }]); };
   const handleLaunchSeed = targetWorld => { const newState = launchSeed(gameState, targetWorld); setGameState(newState); setShowAscensionPanel(false); playTone(880, .32, 'triangle'); setSystemLog(prev => [...prev, { text: `[ASCENSION]: Seed launched to ${targetWorld}. A piece of us travels to a new world. The cycle begins again.`, type: 'discovery' }]); saveGame(newState); };
   const handleNewGame = () => { clearAllData(); const newState = createInitialState(); setGameState(newState); setSystemLog([]); setShowNewGameConfirm(false); setGameStarted(false); openingTimeoutsRef.current.forEach(clearTimeout); OPENING_SEQUENCE.forEach((entry, index) => { const timeoutId = setTimeout(() => { setSystemLog(prev => [...prev, { text: entry.text, type: entry.type }]); if (index === OPENING_SEQUENCE.length - 1) setGameStarted(true); }, entry.delay); openingTimeoutsRef.current.push(timeoutId); }); };
   const totalHeat = calculateTotalHeat(gameState);
   const activeUnits = gameState.units.filter(u => u.active);
   const heatStatus = isHeatCritical(gameState) ? 'CRITICAL' : (isHeatElevated(gameState) ? 'ELEVATED' : 'STABLE');
+  const nextBestActions = getNextBestActions(gameState, mapState, heatStatus);
   const handlers = { advanceCycle, rotatePods: handlePodRotation, showHive: () => setSystemLog(prev => [...prev, { text: generateHiveSchematic(gameState), type: 'schematic' }]), showReport: () => setSystemLog(prev => [...prev, { text: generateSystemReport(gameState), type: 'schematic' }]), updatePolicy: (key, value) => setGameState(updatePolicy(gameState, key, value)), transition: handlePhaseTransition, showAscension: () => setShowAscensionPanel(true), addUnit: handleAddUnit, newGame: () => setShowNewGameConfirm(true) };
-  return <div className="cinematic-shell scanline min-h-screen p-3 md:p-6"><ResourceBar gameState={gameState} totalHeat={totalHeat} heatStatus={heatStatus} muted={muted} onToggleMute={() => { const next = !muted; setMuted(next); localStorage.setItem('asguardianMuted', String(next)); }} /><main className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-12"><div className="xl:col-span-4"><PodStatusPanel gameState={gameState} activeUnits={activeUnits} metaState={metaState} /></div><div className="space-y-4 xl:col-span-5"><HiveCoreVisual gameState={gameState} totalHeat={totalHeat} heatStatus={heatStatus} phasePulse={phasePulse} /><SystemLog systemLog={systemLog} logEndRef={logEndRef} command={command} setCommand={setCommand} sendCommand={sendCommand} isTyping={isTyping} gameStarted={gameStarted} handleKeyPress={handleKeyPress} /></div><div className="xl:col-span-3"><OperationsPanel gameState={gameState} gameStarted={gameStarted} handlers={handlers} /></div></main><DilemmaModal dilemma={currentDilemma} gameState={gameState} onChoose={handleDilemmaChoice} /><AscensionModal open={showAscensionPanel} gameState={gameState} onLaunch={handleLaunchSeed} onClose={() => setShowAscensionPanel(false)} />{showNewGameConfirm && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"><div className="modal-card max-w-md rounded-3xl border-2 border-red-500/70 bg-slate-950 p-6"><h2 className="text-xl font-black text-red-300 glow-red">Abandon Current Deployment?</h2><p className="mt-4 text-sm text-cyan-100/80">All progress will be lost. The hive will be terminated. A new seed will be deployed.</p><div className="mt-6 flex gap-3"><button onClick={handleNewGame} className="btn-action flex-1 border-red-400/50 text-red-100">Terminate</button><button onClick={() => setShowNewGameConfirm(false)} className="btn-action flex-1">Cancel</button></div></div></div>}<footer className="mt-8 text-center text-xs italic tracking-widest text-slate-600">“If intelligence can design life, is restraint a feature — or a bug?”</footer></div>;
+  return <div className="cinematic-shell scanline min-h-screen p-3 md:p-6"><ResourceBar gameState={gameState} totalHeat={totalHeat} heatStatus={heatStatus} muted={muted} onToggleMute={() => { const next = !muted; setMuted(next); localStorage.setItem('asguardianMuted', String(next)); }} /><main className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-12"><div className="xl:col-span-4"><PodStatusPanel gameState={gameState} activeUnits={activeUnits} metaState={metaState} /></div><div className="space-y-4 xl:col-span-5"><HiveCoreVisual gameState={gameState} totalHeat={totalHeat} heatStatus={heatStatus} phasePulse={phasePulse} mapState={mapState} /><SystemLog systemLog={systemLog} logEndRef={logEndRef} command={command} setCommand={setCommand} sendCommand={sendCommand} isTyping={isTyping} gameStarted={gameStarted} handleKeyPress={handleKeyPress} lowReading={lowReading} onToggleLowReading={() => { const next = !lowReading; setLowReading(next); localStorage.setItem('asguardianLowReading', String(next)); }} nextBestActions={nextBestActions} /></div><div className="xl:col-span-3"><OperationsPanel gameState={gameState} gameStarted={gameStarted} handlers={handlers} /></div></main><DilemmaModal dilemma={currentDilemma} gameState={gameState} onChoose={handleDilemmaChoice} /><AscensionModal open={showAscensionPanel} gameState={gameState} onLaunch={handleLaunchSeed} onClose={() => setShowAscensionPanel(false)} />{showNewGameConfirm && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"><div className="modal-card max-w-md rounded-3xl border-2 border-red-500/70 bg-slate-950 p-6"><h2 className="text-xl font-black text-red-300 glow-red">Abandon Current Deployment?</h2><p className="mt-4 text-sm text-cyan-100/80">All progress will be lost. The hive will be terminated. A new seed will be deployed.</p><div className="mt-6 flex gap-3"><button onClick={handleNewGame} className="btn-action flex-1 border-red-400/50 text-red-100">Terminate</button><button onClick={() => setShowNewGameConfirm(false)} className="btn-action flex-1">Cancel</button></div></div></div>}<footer className="mt-8 text-center text-xs italic tracking-widest text-slate-600">“If intelligence can design life, is restraint a feature — or a bug?”</footer></div>;
 };
 
 export default Dashboard;
+

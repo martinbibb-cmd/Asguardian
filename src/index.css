@@ -79,6 +79,7 @@ body::after {
 .resource-meter { background: linear-gradient(90deg, var(--meter-color), transparent); }
 .action-tile { @apply flex min-h-[112px] flex-col items-start justify-between rounded-xl border p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-40; background: rgba(2,6,23,.62); border-color: rgba(34,211,238,.2); }
 .action-tile:hover:not(:disabled) { transform: translateY(-1px); border-color: rgba(103,232,249,.7); box-shadow: 0 0 24px rgba(34,211,238,.16); }
+.action-tile-suggested { border-color: rgba(125,211,252,.78); box-shadow: 0 0 26px rgba(34,211,238,.2), inset 0 0 24px rgba(34,211,238,.12); }
 .action-cyan { box-shadow: inset 0 0 34px rgba(34,211,238,.08); }
 .action-amber { box-shadow: inset 0 0 34px rgba(251,191,36,.08); }
 .action-green { box-shadow: inset 0 0 34px rgba(34,197,94,.08); }
@@ -86,5 +87,18 @@ body::after {
 .action-purple { box-shadow: inset 0 0 34px rgba(168,85,247,.09); }
 .action-rose { box-shadow: inset 0 0 34px rgba(244,63,94,.08); }
 .outcome-card { @apply rounded-xl border p-3; }
+.outcome-card-low-reading { @apply text-lg; }
 .map-marker { @apply absolute z-10 rounded-md border bg-black/45 px-2 py-1 text-[10px] font-black tracking-[0.18em] shadow-lg backdrop-blur-sm; }
 .map-scan { animation: territory-ping 4.4s ease-out infinite; }
+.map-sector { @apply absolute z-10 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border text-[9px] font-black tracking-[0.16em] transition-all duration-500; }
+.map-sector-fog { border-color: rgba(148,163,184,.12); background: repeating-linear-gradient(135deg, rgba(15,23,42,.82), rgba(15,23,42,.82) 5px, rgba(30,41,59,.62) 5px, rgba(30,41,59,.62) 10px); filter: blur(.2px); opacity: .72; }
+.map-sector-revealed { border-color: rgba(103,232,249,.34); background: rgba(8,47,73,.32); color: rgba(207,250,254,.75); box-shadow: inset 0 0 18px rgba(34,211,238,.1); }
+.map-action-explore .map-scan { border-color: rgba(103,232,249,.55); animation-duration: 1.6s; }
+.map-action-harvest .map-marker-mineral, .map-action-harvest .map-marker-organic { animation: marker-consume .9s ease-in-out; }
+.map-action-build .map-marker-pod { animation: marker-build .9s ease-out; }
+.map-action-cool .hive-core { box-shadow: 0 0 42px rgba(56,189,248,.45); }
+.low-reading-mode .panel { font-size: 1.05rem; }
+.low-reading-mode .action-tile { min-height: 96px; }
+
+@keyframes marker-consume { 0% { transform: scale(1); opacity: 1; } 60% { transform: scale(1.35); opacity: .85; } 100% { transform: scale(.72); opacity: .45; } }
+@keyframes marker-build { from { transform: translateY(12px) scale(.6); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
