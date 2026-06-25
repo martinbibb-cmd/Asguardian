@@ -59,6 +59,12 @@ body::after {
 .glow-purple { text-shadow: 0 0 16px rgba(168,85,247,.72); }
 
 .cinematic-shell { position: relative; overflow-x: hidden; max-width: 1780px; margin: 0 auto; }
+.app-shell { min-height: 100vh; }
+.app-header { position: relative; z-index: 20; }
+.app-main { @apply mt-4 grid grid-cols-1 gap-4 xl:grid-cols-12; }
+.app-screen { @apply space-y-4 xl:col-span-6; }
+.desktop-side-panel { @apply xl:col-span-3; }
+.bottom-tabbar { display: none; }
 .panel { @apply rounded-lg border bg-slate-950/70 backdrop-blur-md shadow-2xl; border-color: rgba(34,211,238,.2); box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 0 26px rgba(8,145,178,.09); }
 .panel-title { @apply text-xs font-bold uppercase tracking-[0.24em] pb-2 mb-3 border-b; border-color: rgba(34,211,238,.18); }
 .btn-action { @apply relative overflow-hidden rounded-xl border px-4 py-2.5 text-sm font-bold uppercase tracking-wider transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-40; border-color: rgba(34,211,238,.28); background: linear-gradient(135deg, rgba(14,116,144,.35), rgba(15,23,42,.75)); }
@@ -140,6 +146,11 @@ body::after {
 .morph-card { @apply rounded-xl border border-cyan-400/15 bg-black/25 p-3; }
 .morph-card-visual { @apply overflow-hidden; }
 .morph-image-fallback { @apply mb-3 flex h-24 items-center justify-center rounded-lg border border-cyan-300/15 text-lg font-black text-cyan-100; background: radial-gradient(circle at 35% 30%, rgba(34,197,94,.25), transparent 32%), radial-gradient(circle at 72% 68%, rgba(168,85,247,.22), transparent 30%), rgba(2,6,23,.8); }
+.pressure-control { @apply flex min-h-28 flex-col items-start justify-between rounded-xl border p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-40; border-color: rgba(34,211,238,.2); background: rgba(2,6,23,.68); }
+.pressure-control span { @apply text-[10px] font-black uppercase tracking-[0.22em] text-slate-400; }
+.pressure-control strong { @apply text-lg uppercase tracking-[0.12em] text-cyan-50; }
+.pressure-control small { @apply text-xs leading-snug text-slate-400; }
+.pressure-control-suggested { border-color: rgba(125,211,252,.78); box-shadow: 0 0 22px rgba(34,211,238,.18), inset 0 0 22px rgba(34,211,238,.1); }
 .morph-card h3 { @apply text-sm font-black uppercase tracking-[0.16em] text-cyan-100; }
 .morph-card p { @apply mt-1 text-xs uppercase tracking-[0.14em] text-slate-500; }
 .morph-card span { @apply mt-2 mr-2 inline-block rounded-full border border-cyan-300/20 px-2 py-1 text-[10px] text-cyan-100; }
@@ -158,3 +169,26 @@ body::after {
 
 @keyframes marker-consume { 0% { transform: scale(1); opacity: 1; } 60% { transform: scale(1.35); opacity: .85; } 100% { transform: scale(.72); opacity: .45; } }
 @keyframes marker-build { from { transform: translateY(12px) scale(.6); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+
+@media (max-width: 767px) {
+  html, body, #root { height: 100%; overflow: hidden; }
+  .app-shell { height: 100dvh; max-width: none; display: flex; flex-direction: column; padding: 8px 8px 84px; overflow: hidden; }
+  .app-header { flex: 0 0 auto; }
+  .app-header .panel { padding: 10px; }
+  .app-header h1 { font-size: 1rem; letter-spacing: .18em; }
+  .app-header .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .desktop-tabs, .desktop-side-panel { display: none !important; }
+  .app-main { flex: 1 1 auto; min-height: 0; display: block; margin-top: 8px; overflow: hidden; }
+  .app-screen { height: 100%; overflow-y: auto; overscroll-behavior: contain; padding-bottom: 12px; }
+  .app-screen > * + * { margin-top: 12px; }
+  .bottom-tabbar { position: fixed; left: 8px; right: 8px; bottom: 8px; z-index: 50; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; border: 1px solid rgba(34,211,238,.22); border-radius: 14px; background: rgba(2,6,23,.94); padding: 6px; box-shadow: 0 0 30px rgba(0,0,0,.75), inset 0 0 24px rgba(34,211,238,.08); backdrop-filter: blur(14px); }
+  .bottom-tabbar button { min-width: 0; border: 1px solid transparent; border-radius: 10px; padding: 7px 3px; color: rgb(148,163,184); background: transparent; text-transform: uppercase; }
+  .bottom-tabbar span { display: block; font-size: 10px; font-weight: 900; letter-spacing: .08em; color: rgba(125,211,252,.82); }
+  .bottom-tabbar strong { display: block; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 8px; letter-spacing: .04em; }
+  .bottom-tab-active { border-color: rgba(103,232,249,.65) !important; color: rgb(207,250,254) !important; background: rgba(8,47,73,.6) !important; box-shadow: inset 0 0 18px rgba(34,211,238,.14); }
+  .generated-visual { min-height: 42dvh; }
+  .generated-planet-orb { width: min(78vw, 340px); height: min(78vw, 340px); }
+  .core-visual { min-height: 360px !important; }
+  .planet-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .panel { border-radius: 12px; }
+}

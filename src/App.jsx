@@ -490,6 +490,28 @@ const RecentMorphs = ({ world }) => (
   </section>
 );
 
+const PressureControls = ({ sendCommand, isTyping, gameStarted, nextBestActions, latest }) => (
+  <section className="panel p-4">
+    <div className="mb-3 flex items-center justify-between gap-3">
+      <div>
+        <h2 className="panel-title mb-0 border-0 text-cyan-300">Planetary Pressure</h2>
+        <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">Touch one pressure to advance the simulation</p>
+      </div>
+      {isTyping && <span className="rounded-full border border-cyan-300/30 px-3 py-1 text-xs uppercase text-cyan-200">Thinking</span>}
+    </div>
+    <div className="grid grid-cols-2 gap-2">
+      {QUICK_ACTIONS.slice(0, 4).map(action => (
+        <button key={action.id} type="button" onClick={() => sendCommand(action.command)} disabled={isTyping || !gameStarted} className={`pressure-control action-${action.color} ${nextBestActions.includes(action.id) ? 'pressure-control-suggested' : ''}`}>
+          <span>{action.icon}</span>
+          <strong>{action.label}</strong>
+          <small>{action.preview}</small>
+        </button>
+      ))}
+    </div>
+    {latest && <div className="mt-3 rounded-lg border border-white/10 bg-black/25 p-3"><p className="text-xs uppercase tracking-[0.18em] text-slate-500">Latest Outcome</p><p className="mt-1 text-sm leading-snug text-cyan-100">{compactText(latest.text, 130)}</p></div>}
+  </section>
+);
+
 const WorldsScreen = ({ worlds, currentWorld, onNewWorld, onContinue, onDuplicate, onDelete, onExport, onImport }) => {
   const [jsonText, setJsonText] = useState('');
   return <section className="panel p-4"><div className="flex items-center justify-between gap-3"><h2 className="panel-title mb-0 border-0 text-cyan-300">Worlds</h2><button type="button" onClick={onNewWorld} className="btn-action">New World</button></div><div className="mt-4 space-y-3">{worlds.map(world => <article key={world.id} className={`world-card ${currentWorld?.id === world.id ? 'world-card-active' : ''}`}><div><h3>{world.name}</h3><p>{world.planetSeed?.climate} // cycle {world.environmentState?.cycle || 1} // images {world.generationCount || 0}</p></div><div className="flex flex-wrap gap-2"><button type="button" onClick={() => onContinue(world.id)} className="btn-action py-2 text-xs">Continue</button><button type="button" onClick={() => onDuplicate(world)} className="btn-action py-2 text-xs">Duplicate</button><button type="button" onClick={() => onExport(world)} className="btn-action py-2 text-xs">Export JSON</button><button type="button" onClick={() => onDelete(world.id)} className="btn-action border-red-400/30 py-2 text-xs text-red-100">Delete</button></div></article>)}{!worlds.length && <p className="rounded-xl border border-cyan-400/15 bg-black/25 p-4 text-sm text-slate-400">No IndexedDB worlds yet.</p>}</div><div className="mt-4 rounded-xl border border-white/10 bg-black/25 p-3"><textarea value={jsonText} onChange={event => setJsonText(event.target.value)} className="min-h-24 w-full rounded-xl border border-cyan-500/20 bg-slate-950 p-3 text-xs text-cyan-100 outline-none" placeholder="Paste exported world JSON..." /><button type="button" onClick={() => { onImport(jsonText); setJsonText(''); }} disabled={!jsonText.trim()} className="btn-action mt-2 py-2 text-xs">Import JSON</button></div></section>;
@@ -730,7 +752,7 @@ const Dashboard = () => {
   const handlers = { advanceCycle, rotatePods: handlePodRotation, showHive: () => setSystemLog(prev => [...prev, { text: generateHiveSchematic(gameState), type: 'schematic' }]), showReport: () => setSystemLog(prev => [...prev, { text: generateSystemReport(gameState), type: 'schematic' }]), updatePolicy: (key, value) => setGameState(updatePolicy(gameState, key, value)), transition: handlePhaseTransition, showAscension: () => setShowAscensionPanel(true), addUnit: handleAddUnit, newGame: () => setShowNewGameConfirm(true) };
   const voiceSupported = typeof window !== 'undefined' && Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
   const toggleLowReading = () => { const next = !lowReading; setLowReading(next); localStorage.setItem('asguardianLowReading', String(next)); };
-  const planetScreen = <div className="space-y-4"><PlanetBrief world={currentWorld} gameState={gameState} totalHeat={totalHeat} />{currentWorld && <GeneratedVisual image={currentWorld.generatedImages?.planet} label={currentWorld.name} onRegenerate={() => regenerateImage('planet')} />}<HiveCoreVisual gameState={gameState} totalHeat={totalHeat} heatStatus={heatStatus} phasePulse={phasePulse} mapState={mapState} /><RecentMorphs world={currentWorld} /><SystemLog systemLog={systemLog} logEndRef={logEndRef} command={command} setCommand={setCommand} sendCommand={sendCommand} isTyping={isTyping} gameStarted={gameStarted} handleKeyPress={handleKeyPress} lowReading={lowReading} onToggleLowReading={toggleLowReading} nextBestActions={nextBestActions} /></div>;
+  const planetScreen = <div className="space-y-4"><PlanetBrief world={currentWorld} gameState={gameState} totalHeat={totalHeat} />{currentWorld && <GeneratedVisual image={currentWorld.generatedImages?.planet} label={currentWorld.name} onRegenerate={() => regenerateImage('planet')} />}<HiveCoreVisual gameState={gameState} totalHeat={totalHeat} heatStatus={heatStatus} phasePulse={phasePulse} mapState={mapState} /><PressureControls sendCommand={sendCommand} isTyping={isTyping} gameStarted={gameStarted} nextBestActions={nextBestActions} latest={systemLog.filter(log => log.type !== 'command' && log.text).at(-1)} /><RecentMorphs world={currentWorld} /></div>;
   const conversationScreen = <div className="space-y-4"><section className="panel p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-sm font-black uppercase tracking-[0.2em] text-cyan-100">Seed Conversation</h2><p className="mt-1 text-xs text-slate-400">Speak naturally. Destructive interpreted actions require confirmation.</p></div><button type="button" onClick={startVoiceCommand} disabled={!voiceSupported || listening || isTyping} className="btn-action">{listening ? 'Listening' : 'Push To Talk'}</button></div>{lastTranscript && <p className="mt-3 rounded-xl border border-white/10 bg-black/25 p-3 text-sm text-slate-300">Heard: {lastTranscript}</p>}{pendingVoiceAction && <div className="mt-3 rounded-xl border border-amber-300/40 bg-amber-950/20 p-3"><p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-200">Confirm destructive action</p><p className="mt-1 text-sm text-cyan-100">{pendingVoiceAction.label}: {pendingVoiceAction.command}</p><div className="mt-3 flex gap-2"><button type="button" onClick={() => applyVoiceIntent(pendingVoiceAction)} className="btn-action border-amber-300/40 py-2 text-xs">Apply</button><button type="button" onClick={() => setPendingVoiceAction(null)} className="btn-action py-2 text-xs">Cancel</button></div></div>}{!voiceSupported && <p className="mt-3 text-xs text-slate-500">Speech recognition is unavailable in this browser.</p>}</section><SystemLog systemLog={systemLog} logEndRef={logEndRef} command={command} setCommand={setCommand} sendCommand={sendCommand} isTyping={isTyping} gameStarted={gameStarted} handleKeyPress={handleKeyPress} lowReading={lowReading} onToggleLowReading={toggleLowReading} nextBestActions={nextBestActions} /></div>;
   const screenContent = {
     planet: planetScreen,
@@ -742,7 +764,27 @@ const Dashboard = () => {
     worlds: <WorldsScreen worlds={worlds} currentWorld={currentWorld} onNewWorld={createLocalWorld} onContinue={continueLocalWorld} onDuplicate={duplicateLocalWorld} onDelete={deleteLocalWorld} onExport={exportLocalWorld} onImport={importLocalWorld} />,
   }[activeScreen] || planetScreen;
 
-  return <div className="cinematic-shell scanline min-h-screen p-3 md:p-6"><ResourceBar gameState={gameState} totalHeat={totalHeat} heatStatus={heatStatus} muted={muted} onToggleMute={() => { const next = !muted; setMuted(next); localStorage.setItem('asguardianMuted', String(next)); }} /><nav className="screen-tabs mt-4">{SCREEN_TABS.map(tab => <button key={tab.id} type="button" onClick={() => setActiveScreen(tab.id)} className={activeScreen === tab.id ? 'screen-tab-active' : ''}><span>{tab.icon}</span>{tab.label}</button>)}</nav><main className="dashboard-grid mt-4 grid grid-cols-1 gap-4 xl:grid-cols-12"><div className="space-y-4 xl:order-2 xl:col-span-6">{screenContent}</div><div className="xl:order-1 xl:col-span-3"><PodStatusPanel gameState={gameState} activeUnits={activeUnits} metaState={metaState} /></div><div className="xl:order-3 xl:col-span-3"><OperationsPanel gameState={gameState} gameStarted={gameStarted} handlers={handlers} /></div></main><DilemmaModal dilemma={currentDilemma} gameState={gameState} onChoose={handleDilemmaChoice} /><AscensionModal open={showAscensionPanel} gameState={gameState} onLaunch={handleLaunchSeed} onClose={() => setShowAscensionPanel(false)} />{showNewGameConfirm && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"><div className="modal-card max-w-md rounded-3xl border-2 border-red-500/70 bg-slate-950 p-6"><h2 className="text-xl font-black text-red-300 glow-red">Abandon Current Deployment?</h2><p className="mt-4 text-sm text-cyan-100/80">All progress will be lost. The hive will be terminated. A new seed will be deployed.</p><div className="mt-6 flex gap-3"><button onClick={handleNewGame} className="btn-action flex-1 border-red-400/50 text-red-100">Terminate</button><button onClick={() => setShowNewGameConfirm(false)} className="btn-action flex-1">Cancel</button></div></div></div>}<footer className="mt-8 text-center text-xs italic tracking-widest text-slate-600">"If intelligence can design life, is restraint a feature - or a bug?"</footer></div>;
+  return (
+    <div className="app-shell cinematic-shell scanline">
+      <header className="app-header">
+        <ResourceBar gameState={gameState} totalHeat={totalHeat} heatStatus={heatStatus} muted={muted} onToggleMute={() => { const next = !muted; setMuted(next); localStorage.setItem('asguardianMuted', String(next)); }} />
+      </header>
+      <nav className="screen-tabs desktop-tabs">
+        {SCREEN_TABS.map(tab => <button key={tab.id} type="button" onClick={() => setActiveScreen(tab.id)} className={activeScreen === tab.id ? 'screen-tab-active' : ''}><span>{tab.icon}</span>{tab.label}</button>)}
+      </nav>
+      <main className="app-main dashboard-grid">
+        <section className="app-screen" data-screen={activeScreen}>{screenContent}</section>
+        <aside className="desktop-side-panel"><PodStatusPanel gameState={gameState} activeUnits={activeUnits} metaState={metaState} /></aside>
+        <aside className="desktop-side-panel"><OperationsPanel gameState={gameState} gameStarted={gameStarted} handlers={handlers} /></aside>
+      </main>
+      <nav className="bottom-tabbar" aria-label="Primary screens">
+        {SCREEN_TABS.map(tab => <button key={tab.id} type="button" onClick={() => setActiveScreen(tab.id)} className={activeScreen === tab.id ? 'bottom-tab-active' : ''}><span>{tab.icon}</span><strong>{tab.label}</strong></button>)}
+      </nav>
+      <DilemmaModal dilemma={currentDilemma} gameState={gameState} onChoose={handleDilemmaChoice} />
+      <AscensionModal open={showAscensionPanel} gameState={gameState} onLaunch={handleLaunchSeed} onClose={() => setShowAscensionPanel(false)} />
+      {showNewGameConfirm && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"><div className="modal-card max-w-md rounded-3xl border-2 border-red-500/70 bg-slate-950 p-6"><h2 className="text-xl font-black text-red-300 glow-red">Abandon Current Deployment?</h2><p className="mt-4 text-sm text-cyan-100/80">All progress will be lost. The hive will be terminated. A new seed will be deployed.</p><div className="mt-6 flex gap-3"><button onClick={handleNewGame} className="btn-action flex-1 border-red-400/50 text-red-100">Terminate</button><button onClick={() => setShowNewGameConfirm(false)} className="btn-action flex-1">Cancel</button></div></div></div>}
+    </div>
+  );
 };
 
 export default Dashboard;
