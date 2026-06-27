@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import worker from '../worker/index.js';
 import { onRequest as pagesApiRequest } from '../functions/api/[[path]].js';
-import { sendCommand } from '../src/services/api.js';
+import { healthCheck, sendCommand } from '../src/services/api.js';
 
 const gatewayEnv = {
   DAEDALUS_LLM_BASE_URL: 'https://ai.atlas-phm.uk',
@@ -306,16 +306,48 @@ test('gateway success returns the expected Asguardian response shape', async () 
   }
 });
 
-test('frontend command fallback still works if /api fails', async () => {
+test('frontend command reports visible LLM unavailable state if /api fails', async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => new Response('gateway down', { status: 503 });
 
   try {
     const response = await sendCommand('status report', { heat: 9, biomass: 300, minerals: 100, cycle: 4 });
 
-    assert.equal(response.local, true);
-    assert.equal(response.response.includes('[LOCAL COGNITION]'), true);
-    assert.equal(response.actions.action, 'Local status directive processed during cycle 4');
+    assert.equal(response.error, true);
+    assert.equal(response.local, false);
+    assert.equal(response.fallbackUsed, false);
+    assert.equal(response.response, 'LLM unavailable. Backend returned HTTP 503.');
+    assert.equal(response.response.includes('[LOCAL COGNITION]'), false);
+    assert.equal(response.diagnostics.healthEndpoint, '/api/llm-health');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('frontend health check calls /api/llm-health and reports LLM status', async () => {
+  const originalFetch = globalThis.fetch;
+  let calledUrl;
+  globalThis.fetch = async (url) => {
+    calledUrl = String(url);
+    return Response.json({
+      ok: true,
+      configured: true,
+      baseUrl: 'https://ai.atlas-phm.uk',
+      model: 'llama3.2:3b',
+      gatewayReachable: true,
+      gatewaySelfTest: true,
+    });
+  };
+
+  try {
+    const response = await healthCheck();
+
+    assert.equal(calledUrl, '/api/llm-health');
+    assert.equal(response.frontendLoaded, true);
+    assert.equal(response.backendReachable, true);
+    assert.equal(response.llmReachable, true);
+    assert.equal(response.endpoint, '/api');
+    assert.equal(response.healthEndpoint, '/api/llm-health');
   } finally {
     globalThis.fetch = originalFetch;
   }

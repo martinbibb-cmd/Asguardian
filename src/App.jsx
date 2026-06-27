@@ -1,23 +1,21 @@
 import { useState, useRef, useEffect } from 'react';
-import { sendCommand as sendApiCommand } from './services/api';
+import { getApiDiagnosticsConfig, getLastApiStatus, healthCheck, sendCommand as sendApiCommand } from './services/api';
 import {
   createInitialState,
   processCycle,
   calculateTotalHeat,
   isHeatCritical,
   isHeatElevated,
-  updatePolicy,
   transitionPhase,
   addUnit,
   launchSeed,
   rotatePods,
   UNIT_ROLES,
   PHASES,
-  POD_STATUS
 } from './gameState';
 import { checkDilemmaConditions, applyDilemmaChoice } from './dilemmas';
-import { getMetaState, clearAllData } from './persistence';
-import { generateSystemReport, generateHiveSchematic, generateEvolutionLog } from './schematics';
+import { clearAllData } from './persistence';
+import { generateEvolutionLog } from './schematics';
 import {
   createInitialWorld,
   deleteWorld,
@@ -188,7 +186,21 @@ const SoundToggle = ({ muted, onToggle }) => (
   </button>
 );
 
-const ResourceBar = ({ gameState, totalHeat, heatStatus, muted, onToggleMute }) => {
+const UplinkBadge = ({ status }) => {
+  const backendOnline = status?.backendReachable === true;
+  const llmOnline = status?.llmReachable === true;
+  const unknown = status?.backendReachable == null;
+  const label = unknown ? 'Checking LLM' : backendOnline && llmOnline ? 'LLM Online' : 'LLM Unavailable';
+  const tone = unknown ? 'text-slate-300 border-slate-500/30 bg-slate-900/40' : backendOnline && llmOnline ? 'text-green-200 border-green-400/35 bg-green-950/25' : 'text-red-200 border-red-400/40 bg-red-950/25';
+
+  return (
+    <div className={`rounded-xl border px-3 py-2 text-xs font-black uppercase tracking-[0.16em] ${tone}`}>
+      {label}
+    </div>
+  );
+};
+
+const ResourceBar = ({ gameState, totalHeat, heatStatus, muted, onToggleMute, uplinkStatus }) => {
   const resources = [
     { label: 'Thermal', value: `${totalHeat}%`, pct: totalHeat, color: heatStatus === 'CRITICAL' ? '#ef4444' : heatStatus === 'ELEVATED' ? '#f59e0b' : '#22d3ee', pulse: heatStatus !== 'STABLE' },
     { label: 'Biomass', value: `${gameState.biomass}u`, pct: Math.min(gameState.biomass / 10, 100), color: '#22c55e' },
@@ -211,7 +223,10 @@ const ResourceBar = ({ gameState, totalHeat, heatStatus, muted, onToggleMute }) 
             </div>
           ))}
         </div>
-        <SoundToggle muted={muted} onToggle={onToggleMute} />
+        <div className="flex flex-wrap gap-2">
+          <UplinkBadge status={uplinkStatus} />
+          <SoundToggle muted={muted} onToggle={onToggleMute} />
+        </div>
       </div>
     </div>
   );
@@ -271,15 +286,6 @@ const HiveCoreVisual = ({ gameState, totalHeat, heatStatus, phasePulse, mapState
     </section>
   );
 };
-
-const PodStatusPanel = ({ gameState, activeUnits, metaState }) => (
-  <section className="space-y-4">
-    <div className="panel p-4"><h2 className="panel-title text-cyan-300">Pod Status</h2><div className="space-y-2 text-sm">{gameState.pods.map(pod => <div key={pod.id} className={`rounded-xl border p-3 ${pod.status === POD_STATUS.ACTIVE ? 'border-cyan-400/30 bg-cyan-950/25' : pod.status === POD_STATUS.STANDBY ? 'border-amber-400/30 bg-amber-950/20' : pod.status === POD_STATUS.DAMAGED ? 'border-red-400/30 bg-red-950/20' : 'border-slate-600/30 bg-slate-900/40'}`}><div className="flex justify-between"><span className="font-bold text-cyan-100">{pod.name}</span><span className="uppercase text-slate-400">{pod.status}</span></div><div className="mt-2 h-1 rounded bg-slate-800"><div className="h-full rounded bg-cyan-400/70" style={{ width: `${Math.min(pod.heatContribution * 12, 100)}%` }} /></div><p className="mt-1 text-slate-500">Units {pod.units.length} // Heat {pod.heatContribution}</p></div>)}</div></div>
-    <div className="panel p-4"><h2 className="panel-title text-cyan-300">Hive Composition</h2><div className="space-y-2 text-sm text-slate-400"><div className="flex justify-between"><span>Active Units</span><span className="text-cyan-100">{activeUnits.length}/{gameState.units.length}</span></div>{Object.values(UNIT_ROLES).map(role => { const count = gameState.units.filter(u => u.role === role).length; const active = gameState.units.filter(u => u.role === role && u.active).length; return count ? <div key={role} className="flex justify-between capitalize"><span>{role}</span><span className="text-cyan-100">{active}/{count}</span></div> : null; })}</div></div>
-    <div className="panel p-4"><h2 className="panel-title text-purple-300">System Viability</h2><div className="space-y-3 text-sm">{Object.entries(gameState.systemViability).map(([key, value]) => <div key={key}><div className="flex justify-between text-slate-400"><span className="capitalize">{key.replace(/([A-Z])/g, ' $1')}</span><span className="text-purple-200">{Math.floor(value)}%</span></div><div className="mt-1 h-1.5 rounded bg-slate-800"><div className="h-full rounded bg-purple-400/70" style={{ width: `${value}%` }} /></div></div>)}</div>{gameState.nativeLifeEncountered && <p className="mt-3 text-xs uppercase tracking-widest text-amber-300">Native life encountered</p>}</div>
-    {metaState.totalCompletions > 0 && <div className="panel border-amber-500/30 p-4 text-sm text-amber-100/80"><h2 className="panel-title text-amber-300">Persistent Memory</h2><p>Previous Runs: {metaState.totalCompletions}</p><p>Total Extinctions: {metaState.totalExtinctions}</p><p>Restraints: {metaState.totalRestraints}</p></div>}
-  </section>
-);
 
 const OutcomeCard = ({ log, expanded, onToggle, lowReading, suggestedAction }) => {
   const chips = extractImpact(log.text);
@@ -441,12 +447,10 @@ const AscensionModal = ({ open, gameState, onLaunch, onClose }) => open && gameS
 
 const SCREEN_TABS = [
   { id: 'planet', icon: 'GLB', label: 'Planet' },
-  { id: 'hive', icon: 'NET', label: 'Hive' },
-  { id: 'morphs', icon: 'BIO', label: 'Morphs' },
-  { id: 'evolution', icon: 'EVO', label: 'Evolution' },
+  { id: 'actions', icon: 'ACT', label: 'Actions' },
+  { id: 'story', icon: 'COM', label: 'Story' },
   { id: 'archive', icon: 'LOG', label: 'Archive' },
-  { id: 'conversation', icon: 'COM', label: 'Conversation' },
-  { id: 'worlds', icon: 'SYS', label: 'Worlds' },
+  { id: 'system', icon: 'SYS', label: 'System' },
 ];
 
 const GeneratedVisual = ({ image, label, onRegenerate }) => (
@@ -504,7 +508,7 @@ const PressureControls = ({ sendCommand, isTyping, gameStarted, nextBestActions,
         <button key={action.id} type="button" onClick={() => sendCommand(action.command)} disabled={isTyping || !gameStarted} className={`pressure-control action-${action.color} ${nextBestActions.includes(action.id) ? 'pressure-control-suggested' : ''}`}>
           <span>{action.icon}</span>
           <strong>{action.label}</strong>
-          <small>{action.preview}</small>
+          <small>{action.tone}</small>
         </button>
       ))}
     </div>
@@ -515,6 +519,58 @@ const PressureControls = ({ sendCommand, isTyping, gameStarted, nextBestActions,
 const WorldsScreen = ({ worlds, currentWorld, onNewWorld, onContinue, onDuplicate, onDelete, onExport, onImport }) => {
   const [jsonText, setJsonText] = useState('');
   return <section className="panel p-4"><div className="flex items-center justify-between gap-3"><h2 className="panel-title mb-0 border-0 text-cyan-300">Worlds</h2><button type="button" onClick={onNewWorld} className="btn-action">New World</button></div><div className="mt-4 space-y-3">{worlds.map(world => <article key={world.id} className={`world-card ${currentWorld?.id === world.id ? 'world-card-active' : ''}`}><div><h3>{world.name}</h3><p>{world.planetSeed?.climate} // cycle {world.environmentState?.cycle || 1} // images {world.generationCount || 0}</p></div><div className="flex flex-wrap gap-2"><button type="button" onClick={() => onContinue(world.id)} className="btn-action py-2 text-xs">Continue</button><button type="button" onClick={() => onDuplicate(world)} className="btn-action py-2 text-xs">Duplicate</button><button type="button" onClick={() => onExport(world)} className="btn-action py-2 text-xs">Export JSON</button><button type="button" onClick={() => onDelete(world.id)} className="btn-action border-red-400/30 py-2 text-xs text-red-100">Delete</button></div></article>)}{!worlds.length && <p className="rounded-xl border border-cyan-400/15 bg-black/25 p-4 text-sm text-slate-400">No IndexedDB worlds yet.</p>}</div><div className="mt-4 rounded-xl border border-white/10 bg-black/25 p-3"><textarea value={jsonText} onChange={event => setJsonText(event.target.value)} className="min-h-24 w-full rounded-xl border border-cyan-500/20 bg-slate-950 p-3 text-xs text-cyan-100 outline-none" placeholder="Paste exported world JSON..." /><button type="button" onClick={() => { onImport(jsonText); setJsonText(''); }} disabled={!jsonText.trim()} className="btn-action mt-2 py-2 text-xs">Import JSON</button></div></section>;
+};
+
+const StatusPill = ({ label, value, good }) => (
+  <div className={`rounded-xl border p-3 ${good ? 'border-green-400/25 bg-green-950/15' : 'border-red-400/25 bg-red-950/15'}`}>
+    <span className="block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">{label}</span>
+    <strong className={good ? 'text-green-200' : 'text-red-200'}>{value}</strong>
+  </div>
+);
+
+const SystemStatusScreen = ({ uplinkStatus, onRefresh, worldsProps }) => {
+  const config = getApiDiagnosticsConfig();
+  const last = getLastApiStatus();
+  const status = uplinkStatus || {};
+  const lastError = status.lastError || last.lastError || 'None';
+
+  return (
+    <div className="space-y-4">
+      <section className="panel p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="panel-title mb-0 border-0 text-cyan-300">System Health</h2>
+            <p className="mt-1 text-xs text-slate-400">Debug status for frontend, backend, IndexedDB worlds, and Daedalus LLM Gateway.</p>
+          </div>
+          <button type="button" onClick={onRefresh} className="btn-action py-2 text-xs">Refresh</button>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <StatusPill label="Frontend" value="Loaded" good />
+          <StatusPill label="Backend" value={status.backendReachable ? 'Reachable' : 'Unavailable'} good={status.backendReachable === true} />
+          <StatusPill label="LLM" value={status.llmReachable ? 'Reachable' : 'Unavailable'} good={status.llmReachable === true} />
+        </div>
+        <div className="mt-4 grid gap-3 text-sm md:grid-cols-2">
+          <div className="rounded-xl border border-white/10 bg-black/25 p-3">
+            <span className="block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Frontend API Endpoint</span>
+            <code className="mt-1 block break-all text-cyan-100">{config.endpoint}</code>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-black/25 p-3">
+            <span className="block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">LLM Health Endpoint</span>
+            <code className="mt-1 block break-all text-cyan-100">{config.healthEndpoint}</code>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-black/25 p-3">
+            <span className="block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Last Request Status</span>
+            <strong className="mt-1 block text-cyan-100">{status.lastStatus ?? last.lastStatus ?? 'Not checked'}</strong>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-black/25 p-3">
+            <span className="block text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Last Error</span>
+            <p className="mt-1 break-words text-cyan-100">{lastError}</p>
+          </div>
+        </div>
+      </section>
+      <WorldsScreen {...worldsProps} />
+    </div>
+  );
 };
 
 const HiveScreen = ({ world }) => <section className="panel p-4"><h2 className="panel-title text-cyan-300">Hive Ecology</h2><div className="grid gap-3 md:grid-cols-2">{(world?.knownMorphs || []).map(morph => <article key={morph.id} className="morph-card"><h3>{morph.name}</h3><p>{morph.role}</p><div>{morph.traits.map(trait => <span key={trait}>{trait}</span>)}</div></article>)}</div><div className="nutrient-flow mt-4"><div><strong>Producers</strong><span>biomass and mineral slurry</span></div><div className="flow-arrow">feeds</div><div><strong>Consumers</strong><span>scouts, workers, cognition nodes</span></div><div className="flow-arrow">returns</div><div><strong>Hive Core</strong><span>heat, data, adaptation pressure</span></div></div></section>;
@@ -546,7 +602,6 @@ const Dashboard = () => {
   const [command, setCommand] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [currentDilemma, setCurrentDilemma] = useState(null);
-  const [metaState] = useState(getMetaState());
   const [gameStarted, setGameStarted] = useState(false);
   const [showAscensionPanel, setShowAscensionPanel] = useState(false);
   const [showNewGameConfirm, setShowNewGameConfirm] = useState(false);
@@ -562,6 +617,13 @@ const Dashboard = () => {
   const [pendingVoiceAction, setPendingVoiceAction] = useState(null);
   const [lastTranscript, setLastTranscript] = useState('');
   const [listening, setListening] = useState(false);
+  const [uplinkStatus, setUplinkStatus] = useState({
+    frontendLoaded: true,
+    backendReachable: null,
+    llmReachable: null,
+    lastStatus: null,
+    lastError: null,
+  });
   const logEndRef = useRef(null);
   const typewriterCleanupRef = useRef(null);
   const messageIdCounter = useRef(0);
@@ -629,6 +691,12 @@ const Dashboard = () => {
   useEffect(() => { if (!gameStarted) return undefined; const interval = setInterval(() => { saveCurrentWorld(gameState, mapState, systemLog); }, 30000); return () => clearInterval(interval); }, [gameState, gameStarted, mapState, systemLog]);
   useEffect(() => { logEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [systemLog]);
   useEffect(() => () => { if (typewriterCleanupRef.current) typewriterCleanupRef.current(); }, []);
+  const refreshUplinkStatus = async () => {
+    const status = await healthCheck();
+    setUplinkStatus(status);
+    return status;
+  };
+  useEffect(() => { refreshUplinkStatus(); }, []);
 
   const typewriterEffect = (text, onComplete) => { let index = 0; messageIdCounter.current += 1; const tempId = `msg-${messageIdCounter.current}`; setSystemLog(prev => [...prev, { text: '', type: 'response', id: tempId }]); const interval = setInterval(() => { if (index < text.length) { setSystemLog(prev => prev.map(log => log.id === tempId ? { ...log, text: text.substring(0, index + 1) } : log)); index++; } else { clearInterval(interval); setIsTyping(false); onComplete?.(); } }, 18); return () => clearInterval(interval); };
   const saveCurrentWorld = async (nextState = gameState, nextMap = mapState, nextLog = systemLog, extra = {}) => {
@@ -676,7 +744,7 @@ const Dashboard = () => {
     setGameStarted(true);
   };
   const duplicateLocalWorld = async (world) => { await duplicateWorld(world); setWorlds(await listWorlds()); };
-  const deleteLocalWorld = async (id) => { await deleteWorld(id); setWorlds(await listWorlds()); if (currentWorld?.id === id) { setCurrentWorld(null); setActiveScreen('worlds'); } };
+  const deleteLocalWorld = async (id) => { await deleteWorld(id); setWorlds(await listWorlds()); if (currentWorld?.id === id) { setCurrentWorld(null); setActiveScreen('system'); } };
   const exportLocalWorld = async (world) => { await navigator.clipboard?.writeText(exportWorldJson(world)); setSystemLog(prev => [...prev, { text: `[ARCHIVE]: ${world.name} copied as JSON.`, type: 'system' }]); };
   const importLocalWorld = async (jsonText) => { const world = await importWorldJson(jsonText); setWorlds(await listWorlds()); continueLocalWorld(world.id); };
   const regenerateImage = async (kind, subject = null) => {
@@ -716,6 +784,13 @@ const Dashboard = () => {
     try {
       const context = { heat: calculateTotalHeat(gameState), biomass: gameState.biomass, minerals: gameState.minerals, data: gameState.data, energy: gameState.energy, cycle: gameState.cycle, phase: gameState.phase, activeUnits: gameState.units.filter(u => u.active).length, totalUnits: gameState.units.length, heatCritical: isHeatCritical(gameState), heatElevated: isHeatElevated(gameState), unlocked: gameState.unlocked, policies: gameState.policies, nativeLifeEncountered: gameState.nativeLifeEncountered, extinctionEvents: gameState.extinctionEvents, territory: gameState.territory, ascension: gameState.ascension };
       const data = await sendApiCommand(userCommand, context);
+      setUplinkStatus(prev => ({ ...prev, ...getLastApiStatus() }));
+      if (data.error) {
+        setIsTyping(false);
+        setSystemLog(prev => [...prev, { text: `[LLM UNAVAILABLE]: ${data.response}${data.details ? ` ${data.details}` : ''}`, type: 'error' }]);
+        refreshUplinkStatus();
+        return;
+      }
       const responseText = data.response || 'No response received.';
       const visualAction = data.actions?.action || classifyDirective(userCommand);
       setMapState(prev => advanceMapState(prev, visualAction));
@@ -730,6 +805,7 @@ const Dashboard = () => {
           setGameState(newState);
           saveCurrentWorld(newState, mapState, systemLog, { archiveTake: 1, adaptation: visualAction });
         }
+        refreshUplinkStatus();
         typewriterCleanupRef.current = null;
       });
     } catch (error) {
@@ -746,36 +822,33 @@ const Dashboard = () => {
   const handleLaunchSeed = targetWorld => { const newState = launchSeed(gameState, targetWorld); setGameState(newState); setShowAscensionPanel(false); playTone(880, .32, 'triangle'); const nextLogs = [...systemLog, { text: `[ASCENSION]: Seed launched to ${targetWorld}. A piece of us travels to a new world. The cycle begins again.`, type: 'discovery' }]; setSystemLog(nextLogs); saveCurrentWorld(newState, mapState, nextLogs, { archiveTake: 1, adaptation: 'ascension pressure' }); };
   const handleNewGame = () => { clearAllData(); const newState = createInitialState(); setGameState(newState); setSystemLog([]); setShowNewGameConfirm(false); setGameStarted(false); openingTimeoutsRef.current.forEach(clearTimeout); OPENING_SEQUENCE.forEach((entry, index) => { const timeoutId = setTimeout(() => { setSystemLog(prev => [...prev, { text: entry.text, type: entry.type }]); if (index === OPENING_SEQUENCE.length - 1) setGameStarted(true); }, entry.delay); openingTimeoutsRef.current.push(timeoutId); }); };
   const totalHeat = calculateTotalHeat(gameState);
-  const activeUnits = gameState.units.filter(u => u.active);
   const heatStatus = isHeatCritical(gameState) ? 'CRITICAL' : (isHeatElevated(gameState) ? 'ELEVATED' : 'STABLE');
   const nextBestActions = getNextBestActions(gameState, mapState, heatStatus);
-  const handlers = { advanceCycle, rotatePods: handlePodRotation, showHive: () => setSystemLog(prev => [...prev, { text: generateHiveSchematic(gameState), type: 'schematic' }]), showReport: () => setSystemLog(prev => [...prev, { text: generateSystemReport(gameState), type: 'schematic' }]), updatePolicy: (key, value) => setGameState(updatePolicy(gameState, key, value)), transition: handlePhaseTransition, showAscension: () => setShowAscensionPanel(true), addUnit: handleAddUnit, newGame: () => setShowNewGameConfirm(true) };
   const voiceSupported = typeof window !== 'undefined' && Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
   const toggleLowReading = () => { const next = !lowReading; setLowReading(next); localStorage.setItem('asguardianLowReading', String(next)); };
-  const planetScreen = <div className="space-y-4"><PlanetBrief world={currentWorld} gameState={gameState} totalHeat={totalHeat} />{currentWorld && <GeneratedVisual image={currentWorld.generatedImages?.planet} label={currentWorld.name} onRegenerate={() => regenerateImage('planet')} />}<HiveCoreVisual gameState={gameState} totalHeat={totalHeat} heatStatus={heatStatus} phasePulse={phasePulse} mapState={mapState} /><PressureControls sendCommand={sendCommand} isTyping={isTyping} gameStarted={gameStarted} nextBestActions={nextBestActions} latest={systemLog.filter(log => log.type !== 'command' && log.text).at(-1)} /><RecentMorphs world={currentWorld} /></div>;
+  const worldsProps = { worlds, currentWorld, onNewWorld: createLocalWorld, onContinue: continueLocalWorld, onDuplicate: duplicateLocalWorld, onDelete: deleteLocalWorld, onExport: exportLocalWorld, onImport: importLocalWorld };
+  const latestOutcome = systemLog.filter(log => log.type !== 'command' && log.text).at(-1);
+  const planetScreen = <div className="space-y-4"><PlanetBrief world={currentWorld} gameState={gameState} totalHeat={totalHeat} />{currentWorld && <GeneratedVisual image={currentWorld.generatedImages?.planet} label={currentWorld.name} onRegenerate={() => regenerateImage('planet')} />}<HiveCoreVisual gameState={gameState} totalHeat={totalHeat} heatStatus={heatStatus} phasePulse={phasePulse} mapState={mapState} /><RecentMorphs world={currentWorld} /></div>;
+  const actionsScreen = <div className="space-y-4"><PressureControls sendCommand={sendCommand} isTyping={isTyping} gameStarted={gameStarted} nextBestActions={nextBestActions} latest={latestOutcome} /><section className="panel p-4"><h2 className="panel-title text-cyan-300">Action Drawer</h2><div className="grid gap-2 sm:grid-cols-2"><button onClick={advanceCycle} disabled={!gameStarted} className="btn-action">Advance Cycle</button><button onClick={handlePodRotation} disabled={!gameStarted} className="btn-action">Cool / Rotate Pods</button><button onClick={() => handleAddUnit(UNIT_ROLES.SENSOR, getUnitType(gameState.phase))} disabled={!gameStarted} className="btn-action">Build Sensor</button><button onClick={() => handleAddUnit(UNIT_ROLES.WORKER, getUnitType(gameState.phase))} disabled={!gameStarted} className="btn-action">Build Worker</button>{gameState.phase === PHASES.MECHANICAL && gameState.unlocked.hybridUnits && <button onClick={() => handlePhaseTransition(PHASES.HYBRID)} className="btn-action border-purple-400/40">Hybridize Hive</button>}{gameState.phase === PHASES.HYBRID && gameState.unlocked.biologicalUnits && <button onClick={() => handlePhaseTransition(PHASES.BIOLOGICAL)} className="btn-action border-green-400/40">Biological Shift</button>}{gameState.phase === PHASES.BIOLOGICAL && gameState.unlocked.interstellarSeeding && <button onClick={() => setShowAscensionPanel(true)} className="btn-action border-pink-400/50">Launch Seed</button>}</div></section></div>;
   const conversationScreen = <div className="space-y-4"><section className="panel p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-sm font-black uppercase tracking-[0.2em] text-cyan-100">Seed Conversation</h2><p className="mt-1 text-xs text-slate-400">Speak naturally. Destructive interpreted actions require confirmation.</p></div><button type="button" onClick={startVoiceCommand} disabled={!voiceSupported || listening || isTyping} className="btn-action">{listening ? 'Listening' : 'Push To Talk'}</button></div>{lastTranscript && <p className="mt-3 rounded-xl border border-white/10 bg-black/25 p-3 text-sm text-slate-300">Heard: {lastTranscript}</p>}{pendingVoiceAction && <div className="mt-3 rounded-xl border border-amber-300/40 bg-amber-950/20 p-3"><p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-200">Confirm destructive action</p><p className="mt-1 text-sm text-cyan-100">{pendingVoiceAction.label}: {pendingVoiceAction.command}</p><div className="mt-3 flex gap-2"><button type="button" onClick={() => applyVoiceIntent(pendingVoiceAction)} className="btn-action border-amber-300/40 py-2 text-xs">Apply</button><button type="button" onClick={() => setPendingVoiceAction(null)} className="btn-action py-2 text-xs">Cancel</button></div></div>}{!voiceSupported && <p className="mt-3 text-xs text-slate-500">Speech recognition is unavailable in this browser.</p>}</section><SystemLog systemLog={systemLog} logEndRef={logEndRef} command={command} setCommand={setCommand} sendCommand={sendCommand} isTyping={isTyping} gameStarted={gameStarted} handleKeyPress={handleKeyPress} lowReading={lowReading} onToggleLowReading={toggleLowReading} nextBestActions={nextBestActions} /></div>;
   const screenContent = {
     planet: planetScreen,
-    hive: <HiveScreen world={currentWorld} />,
-    morphs: <MorphScreen world={currentWorld} selectedMorphId={selectedMorphId} onSelectMorph={setSelectedMorphId} onRegenerate={regenerateImage} />,
-    evolution: <EvolutionScreen world={currentWorld} />,
-    archive: <ArchiveScreen world={currentWorld} />,
-    conversation: conversationScreen,
-    worlds: <WorldsScreen worlds={worlds} currentWorld={currentWorld} onNewWorld={createLocalWorld} onContinue={continueLocalWorld} onDuplicate={duplicateLocalWorld} onDelete={deleteLocalWorld} onExport={exportLocalWorld} onImport={importLocalWorld} />,
+    actions: actionsScreen,
+    story: conversationScreen,
+    archive: <div className="space-y-4"><HiveScreen world={currentWorld} /><MorphScreen world={currentWorld} selectedMorphId={selectedMorphId} onSelectMorph={setSelectedMorphId} onRegenerate={regenerateImage} /><EvolutionScreen world={currentWorld} /><ArchiveScreen world={currentWorld} /></div>,
+    system: <SystemStatusScreen uplinkStatus={uplinkStatus} onRefresh={refreshUplinkStatus} worldsProps={worldsProps} />,
   }[activeScreen] || planetScreen;
 
   return (
     <div className="app-shell cinematic-shell scanline">
       <header className="app-header">
-        <ResourceBar gameState={gameState} totalHeat={totalHeat} heatStatus={heatStatus} muted={muted} onToggleMute={() => { const next = !muted; setMuted(next); localStorage.setItem('asguardianMuted', String(next)); }} />
+        <ResourceBar gameState={gameState} totalHeat={totalHeat} heatStatus={heatStatus} muted={muted} uplinkStatus={uplinkStatus} onToggleMute={() => { const next = !muted; setMuted(next); localStorage.setItem('asguardianMuted', String(next)); }} />
       </header>
       <nav className="screen-tabs desktop-tabs">
         {SCREEN_TABS.map(tab => <button key={tab.id} type="button" onClick={() => setActiveScreen(tab.id)} className={activeScreen === tab.id ? 'screen-tab-active' : ''}><span>{tab.icon}</span>{tab.label}</button>)}
       </nav>
       <main className="app-main dashboard-grid">
         <section className="app-screen" data-screen={activeScreen}>{screenContent}</section>
-        <aside className="desktop-side-panel"><PodStatusPanel gameState={gameState} activeUnits={activeUnits} metaState={metaState} /></aside>
-        <aside className="desktop-side-panel"><OperationsPanel gameState={gameState} gameStarted={gameStarted} handlers={handlers} /></aside>
       </main>
       <nav className="bottom-tabbar" aria-label="Primary screens">
         {SCREEN_TABS.map(tab => <button key={tab.id} type="button" onClick={() => setActiveScreen(tab.id)} className={activeScreen === tab.id ? 'bottom-tab-active' : ''}><span>{tab.icon}</span><strong>{tab.label}</strong></button>)}
